@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../utils/theme_manager.dart';
 
 class BankAccountsScreen extends StatelessWidget {
   const BankAccountsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -17,115 +20,131 @@ class BankAccountsScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _buildBankItem("State Bank of India", "**** 1234", true),
-            _buildBankItem("HDFC Bank", "**** 5678", false),
-            _buildBankItem("ICICI Bank", "**** 9012", false),
-
-            const SizedBox(height: 20),
-
-            // Add New Bank Button
-            GestureDetector(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Add Bank feature coming soon!"),
-                  ),
-                );
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFF6C63FF), width: 1),
-                  borderRadius: BorderRadius.circular(15),
-                  color: const Color(0xFF6C63FF).withOpacity(0.1),
-                ),
-                child: Center(
-                  child: Text(
-                    "+ Add New Bank Account",
-                    style: GoogleFonts.poppins(
-                      color: const Color(0xFF6C63FF),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
+            _bankTile(
+              context,
+              "State Bank of India",
+              "**** 3942",
+              true,
+              isDark,
             ),
+            const SizedBox(height: 12),
+            _bankTile(context, "HDFC Bank", "**** 7845", false, isDark),
+            const SizedBox(height: 12),
+            _bankTile(context, "ICICI Bank", "**** 1234", false, isDark),
+            const SizedBox(height: 24),
+            _addBankButton(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBankItem(String bankName, String accNum, bool isPrimary) {
+  Widget _bankTile(
+    BuildContext context,
+    String name,
+    String acc,
+    bool isPrimary,
+    bool isDark,
+  ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D44),
-        borderRadius: BorderRadius.circular(20),
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isPrimary
+              ? AppColors.primary.withOpacity(0.3)
+              : Theme.of(context).dividerColor.withOpacity(0.06),
+        ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Container(
-                height: 40,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.account_balance,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 15),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    bankName,
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.account_balance,
+              color: AppColors.primary,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
                   ),
-                  Text(
-                    accNum,
-                    style: GoogleFonts.poppins(
-                      color: Colors.grey,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+                Text(
+                  "Savings  •  $acc",
+                  style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+                ),
+              ],
+            ),
           ),
           if (isPrimary)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(10),
+                color: AppColors.success.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 "Primary",
                 style: GoogleFonts.poppins(
-                  color: Colors.green,
+                  color: AppColors.success,
                   fontSize: 10,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _addBankButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Add Bank Account — coming soon!")),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: AppColors.primary.withOpacity(0.3),
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_circle_outline, color: AppColors.primary, size: 22),
+            const SizedBox(width: 10),
+            Text(
+              "Link New Bank Account",
+              style: GoogleFonts.poppins(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

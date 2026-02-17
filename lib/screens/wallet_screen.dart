@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'home_screen.dart'; // To reuse CreditCardWidget
+import '../utils/theme_manager.dart';
 
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -18,20 +20,17 @@ class WalletScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Total Balance
+            // Total Balance Card
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6C63FF), Color(0xFF4834D4)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(25),
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(18),
               ),
               child: Column(
                 children: [
@@ -39,10 +38,10 @@ class WalletScreen extends StatelessWidget {
                     "Total Balance",
                     style: GoogleFonts.poppins(
                       color: Colors.white70,
-                      fontSize: 16,
+                      fontSize: 14,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Text(
                     "₹ 1,24,500.00",
                     style: GoogleFonts.poppins(
@@ -51,37 +50,231 @@ class WalletScreen extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _balanceChip("Income", "₹25,000", AppColors.success),
+                      const SizedBox(width: 16),
+                      _balanceChip("Expense", "₹12,450", AppColors.error),
+                    ],
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 24),
 
-            // Cards Section Header
+            // My Cards
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   "My Cards",
                   style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                     color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.add_circle, color: Color(0xFF6C63FF)),
+                Icon(Icons.add_circle_outline, color: AppColors.primary),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            _bankCard(
+              context,
+              "State Bank of India",
+              "**** 3942",
+              "Debit",
+              "VISA",
+              isDark,
+            ),
+            const SizedBox(height: 12),
+            _bankCard(
+              context,
+              "HDFC Bank",
+              "**** 7845",
+              "Credit",
+              "Mastercard",
+              isDark,
+            ),
+
+            const SizedBox(height: 24),
+
+            // Linked UPI
+            Text(
+              "Linked UPI IDs",
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _upiTile(context, "vamsidhar@sbi", "State Bank of India", isDark),
+            _upiTile(context, "vamsidhar@hdfc", "HDFC Bank", isDark),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _balanceChip(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            "$label: $value",
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bankCard(
+    BuildContext context,
+    String bank,
+    String number,
+    String type,
+    String network,
+    bool isDark,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.08),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.credit_card,
+              color: AppColors.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  bank,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  "$number  •  $type",
+                  style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+          ),
+          Text(
+            network,
+            style: GoogleFonts.poppins(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-            // Reusing CreditCardWidget from home_screen or a similar one
-            const CreditCardWidget(),
-            const SizedBox(height: 15),
-            const CreditCardWidget(), // Displaying another card as example
-          ],
+  Widget _upiTile(
+    BuildContext context,
+    String upiId,
+    String bank,
+    bool isDark,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.06),
         ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.accent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.account_balance,
+              color: AppColors.accent,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  upiId,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  bank,
+                  style: GoogleFonts.poppins(color: Colors.grey, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppColors.success.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              "Active",
+              style: GoogleFonts.poppins(
+                color: AppColors.success,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

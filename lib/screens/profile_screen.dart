@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../utils/theme_manager.dart';
 import 'personal_info_screen.dart';
 import 'bank_accounts_screen.dart';
 import 'notifications_settings_screen.dart';
@@ -16,7 +17,7 @@ class ProfileScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Profile",
+          "My Money",
           style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
@@ -35,246 +36,248 @@ class ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // If nested in tabs, we might not want extra padding at top if the design flows well
-    // But consistent padding is good.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              height: isNested ? 0 : 10,
-            ), // Use ternary instead of collection-if
-            // Premium Profile Header
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF6C63FF).withOpacity(0.5),
-                        const Color(0xFF2D2D44).withOpacity(0.0),
-                      ],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
+            if (isNested) ...[
+              Text(
+                "My Money",
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Profile Card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    child: const Icon(
+                      Icons.person,
+                      color: Colors.white,
+                      size: 30,
                     ),
-                    borderRadius: BorderRadius.circular(30),
                   ),
-                ),
-                Column(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF6C63FF).withOpacity(0.5),
-                            blurRadius: 25,
-                            spreadRadius: 2,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Vamsidhar",
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
-                        ],
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: const CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Color(0xFF2D2D44),
-                        child: Icon(
-                          Icons.person,
-                          size: 50,
-                          color: Colors.white,
                         ),
-                        // backgroundImage: NetworkImage("https://i.pravatar.cc/300"), // Optional: Real image
-                      ),
+                        Text(
+                          "UPI: vamsidhar@upi",
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 15),
-                    Text(
-                      "Vamsidhar",
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      "Gold ⭐",
                       style: GoogleFonts.poppins(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF6C63FF).withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: const Color(0xFF6C63FF).withOpacity(0.5),
-                        ),
-                      ),
-                      child: Text(
-                        "Gold Member",
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFF6C63FF),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 24),
 
-            // Settings Sections
-            _buildSectionHeader("Account"),
-            _buildProfileItem(
-              context,
-              Icons.person_outline,
-              "Personal Info",
-              const PersonalInfoScreen(),
-            ),
-            _buildProfileItem(
+            // == Payment Settings ==
+            _sectionHeader("Payment Settings"),
+            const SizedBox(height: 8),
+            _settingsTile(
               context,
               Icons.credit_card,
               "My Cards",
               const WalletScreen(),
+              isDark,
             ),
-            _buildProfileItem(
+            _settingsTile(
               context,
               Icons.account_balance,
               "Bank Accounts",
               const BankAccountsScreen(),
+              isDark,
+            ),
+            _settingsTile(
+              context,
+              Icons.person_outline,
+              "Personal Info",
+              const PersonalInfoScreen(),
+              isDark,
             ),
 
             const SizedBox(height: 20),
-            _buildSectionHeader("Settings"),
-            _buildProfileItem(
+
+            // == App Settings ==
+            _sectionHeader("App Settings"),
+            const SizedBox(height: 8),
+            _settingsTile(
               context,
               Icons.notifications_outlined,
               "Notifications",
               const NotificationsSettingsScreen(),
+              isDark,
             ),
-            _buildProfileItem(
+            _settingsTile(
               context,
               Icons.lock_outline,
               "Privacy & Security",
               const PrivacySecurityScreen(),
+              isDark,
             ),
-            _buildProfileItem(
-              context,
-              Icons.language,
-              "Language",
-              null,
-            ), // Placeholder
-            _buildProfileItem(
+            _settingsTile(
               context,
               Icons.dark_mode_outlined,
               "Theme",
               const ThemeSelectionScreen(),
+              isDark,
             ),
+            _settingsTile(context, Icons.language, "Language", null, isDark),
 
             const SizedBox(height: 20),
+
+            // == More ==
+            _sectionHeader("More"),
+            const SizedBox(height: 8),
+            _settingsTile(
+              context,
+              Icons.help_outline,
+              "Help & Support",
+              null,
+              isDark,
+            ),
+            _settingsTile(context, Icons.info_outline, "About", null, isDark),
+
+            const SizedBox(height: 16),
+
             // Logout
             Container(
               decoration: BoxDecoration(
-                color: Colors.redAccent.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                color: AppColors.error.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.error.withOpacity(0.2)),
               ),
               child: ListTile(
-                leading: const Icon(Icons.logout, color: Colors.redAccent),
+                leading: const Icon(
+                  Icons.logout,
+                  color: AppColors.error,
+                  size: 22,
+                ),
                 title: Text(
                   "Logout",
                   style: GoogleFonts.poppins(
-                    color: Colors.redAccent,
+                    color: AppColors.error,
                     fontWeight: FontWeight.w600,
+                    fontSize: 14,
                   ),
                 ),
                 onTap: () {
-                  // Ensure we don't pop if we can't
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  }
+                  if (Navigator.canPop(context)) Navigator.pop(context);
                 },
               ),
             ),
-            // Bottom cushioning for nav bar
-            SizedBox(height: isNested ? 80 : 0),
+
+            SizedBox(height: isNested ? 80 : 20),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _sectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10, left: 10),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey,
-            letterSpacing: 1,
-          ),
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        title.toUpperCase(),
+        style: GoogleFonts.poppins(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Colors.grey,
+          letterSpacing: 1.2,
         ),
       ),
     );
   }
 
-  Widget _buildProfileItem(
+  Widget _settingsTile(
     BuildContext context,
     IconData icon,
     String title,
-    Widget? destination,
+    Widget? dest,
+    bool isDark,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 15),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          color: Theme.of(context).dividerColor.withOpacity(0.06),
         ),
       ),
       child: ListTile(
+        dense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
-            shape: BoxShape.circle,
+            color: AppColors.primary.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: Theme.of(context).iconTheme.color, size: 20),
+          child: Icon(icon, color: AppColors.primary, size: 20),
         ),
         title: Text(
           title,
           style: GoogleFonts.poppins(
-            color: Theme.of(context).textTheme.bodyLarge?.color,
             fontWeight: FontWeight.w500,
-            fontSize: 15,
+            fontSize: 14,
+            color: Theme.of(context).textTheme.bodyLarge?.color,
           ),
         ),
-        trailing: const Icon(
-          Icons.arrow_forward_ios,
-          size: 14,
-          color: Colors.grey,
-        ),
+        trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
         onTap: () {
-          if (destination != null) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => destination),
-            );
+          if (dest != null) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => dest));
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text("Feature coming soon!")),

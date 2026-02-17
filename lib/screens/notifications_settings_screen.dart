@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../utils/theme_manager.dart';
 
 class NotificationsSettingsScreen extends StatefulWidget {
   const NotificationsSettingsScreen({super.key});
@@ -11,12 +12,16 @@ class NotificationsSettingsScreen extends StatefulWidget {
 
 class _NotificationsSettingsScreenState
     extends State<NotificationsSettingsScreen> {
-  bool _pushEnabled = true;
-  bool _emailEnabled = false;
-  bool _promoEnabled = true;
+  bool _pushNotifications = true;
+  bool _emailAlerts = false;
+  bool _transactionAlerts = true;
+  bool _promoOffers = false;
+  bool _securityAlerts = true;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -28,26 +33,57 @@ class _NotificationsSettingsScreenState
         centerTitle: true,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _buildSwitchTile(
+            _toggleTile(
+              context,
+              Icons.notifications_active,
               "Push Notifications",
-              "Receive push notifications for transactions",
-              _pushEnabled,
-              (val) => setState(() => _pushEnabled = val),
+              "Receive transaction alerts",
+              _pushNotifications,
+              (v) => setState(() => _pushNotifications = v),
+              isDark,
             ),
-            _buildSwitchTile(
+            const SizedBox(height: 10),
+            _toggleTile(
+              context,
+              Icons.email_outlined,
               "Email Alerts",
-              "Receive email updates",
-              _emailEnabled,
-              (val) => setState(() => _emailEnabled = val),
+              "Get email summaries",
+              _emailAlerts,
+              (v) => setState(() => _emailAlerts = v),
+              isDark,
             ),
-            _buildSwitchTile(
+            const SizedBox(height: 10),
+            _toggleTile(
+              context,
+              Icons.payment,
+              "Transaction Alerts",
+              "Instant payment notifications",
+              _transactionAlerts,
+              (v) => setState(() => _transactionAlerts = v),
+              isDark,
+            ),
+            const SizedBox(height: 10),
+            _toggleTile(
+              context,
+              Icons.local_offer,
               "Promotional Offers",
-              "Get notified about new deals",
-              _promoEnabled,
-              (val) => setState(() => _promoEnabled = val),
+              "Deals and cashback offers",
+              _promoOffers,
+              (v) => setState(() => _promoOffers = v),
+              isDark,
+            ),
+            const SizedBox(height: 10),
+            _toggleTile(
+              context,
+              Icons.security,
+              "Security Alerts",
+              "Login & password change alerts",
+              _securityAlerts,
+              (v) => setState(() => _securityAlerts = v),
+              isDark,
             ),
           ],
         ),
@@ -55,34 +91,44 @@ class _NotificationsSettingsScreenState
     );
   }
 
-  Widget _buildSwitchTile(
+  Widget _toggleTile(
+    BuildContext context,
+    IconData icon,
     String title,
     String subtitle,
     bool value,
-    Function(bool) onChanged,
+    ValueChanged<bool> onChanged,
+    bool isDark,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D44),
-        borderRadius: BorderRadius.circular(20),
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.06),
+        ),
       ),
       child: SwitchListTile(
+        secondary: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: AppColors.primary, size: 20),
+        ),
         title: Text(
           title,
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
-          ),
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: 14),
         ),
         subtitle: Text(
           subtitle,
-          style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+          style: GoogleFonts.poppins(color: Colors.grey, fontSize: 11),
         ),
         value: value,
         onChanged: onChanged,
-        activeColor: const Color(0xFF6C63FF),
+        activeColor: AppColors.primary,
         contentPadding: EdgeInsets.zero,
       ),
     );

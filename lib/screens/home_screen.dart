@@ -1,19 +1,19 @@
-import 'dart:ui' as ui; // Needed for PathMetric if not directly exposed
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../utils/theme_manager.dart';
 import 'send_money_screen.dart';
 import 'request_money_screen.dart';
 import 'wallet_screen.dart';
 import 'more_services_screen.dart';
 import 'transaction_history_screen.dart';
 import 'add_card_screen.dart';
-
 import 'profile_screen.dart';
 
-// 1. DASHBOARD SCREEN
+// ============================================
+// 1. DASHBOARD / HOME SCREEN (PhonePe style)
+// ============================================
 class DashboardTab extends StatefulWidget {
   const DashboardTab({super.key});
 
@@ -22,261 +22,357 @@ class DashboardTab extends StatefulWidget {
 }
 
 class _DashboardTabState extends State<DashboardTab> {
-  int _currentCardIndex = 0;
-  final PageController _pageController = PageController(viewportFraction: 0.9);
-
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(vertical: 20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Hello,",
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color:
-                            Theme.of(context).textTheme.bodySmall?.color ??
-                            Colors.grey,
-                      ),
-                    ),
-                    Text(
-                      "Vamsidhar",
-                      style: GoogleFonts.poppins(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                  ],
-                ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ProfileScreen(),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor, // Adaptive color
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFF6C63FF),
-                        width: 2,
-                      ),
-                    ),
-                    child: CircleAvatar(
-                      radius: 22,
-                      backgroundColor:
-                          Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFF2D2D44)
-                          : Colors.grey[200],
-                      child: Icon(
-                        Icons.person,
-                        color: Theme.of(context).iconTheme.color,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 25),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-            // Credit Card Widget
-            // Cards Section
-            SizedBox(
-              height: 240, // Match Card Height
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentCardIndex = index;
-                  });
-                },
-                children: const [
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 5),
-                    child: CreditCardWidget(),
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          // Purple gradient header
+          SliverToBoxAdapter(
+            child: Container(
+              decoration: BoxDecoration(gradient: AppColors.headerGradient),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+                  child: Column(
+                    children: [
+                      // Top bar: profile, greeting, notification
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ProfileScreen(),
+                              ),
+                            ),
+                            child: const CircleAvatar(
+                              radius: 20,
+                              backgroundColor: Colors.white24,
+                              child: Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Hello, Vamsidhar 👋",
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  "Welcome back!",
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {},
+                            icon: const Icon(
+                              Icons.notifications_outlined,
+                              color: Colors.white,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {},
+                            icon: const Icon(
+                              Icons.help_outline,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Search bar
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.search,
+                              color: Colors.white70,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              "Pay by name or phone number",
+                              style: GoogleFonts.poppins(
+                                color: Colors.white54,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 5),
-                    child: CreditCardWidget(),
+                ),
+              ),
+            ),
+          ),
+
+          // Body content
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // === MONEY TRANSFER SECTION ===
+                  _sectionTitle("Money Transfer"),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _circleAction(
+                        context,
+                        Icons.phone_android,
+                        "To Mobile",
+                        AppColors.primary,
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SendMoneyScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _circleAction(
+                        context,
+                        Icons.account_balance,
+                        "To Bank",
+                        const Color(0xFF1565C0),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SendMoneyScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _circleAction(
+                        context,
+                        Icons.swap_horiz,
+                        "To Self",
+                        const Color(0xFF00897B),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const WalletScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _circleAction(
+                        context,
+                        Icons.account_balance_wallet,
+                        "Balance",
+                        const Color(0xFFEF6C00),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const WalletScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 5),
-                    child: AddCardWidget(),
+
+                  const SizedBox(height: 24),
+
+                  // === PEOPLE SECTION ===
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _sectionTitle("People"),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SendMoneyScreen(),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          "View All",
+                          style: GoogleFonts.poppins(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _contactBubble("Alex", Colors.blueAccent),
+                        _contactBubble("Sam", Colors.orangeAccent),
+                        _contactBubble("Kate", AppColors.primary),
+                        _contactBubble("Mom", Colors.teal),
+                        _contactBubble("Dad", Colors.redAccent),
+                        _contactBubble("Mike", Colors.green),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // === RECHARGE & BILLS ===
+                  _sectionTitle("Recharge & Pay Bills"),
+                  const SizedBox(height: 12),
+                  _buildServicesGrid(context),
+
+                  const SizedBox(height: 24),
+
+                  // === PROMOTIONS ===
+                  _sectionTitle("Offers & Rewards"),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 140,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        _promoCard(
+                          "Flat ₹100 Cashback",
+                          "On first UPI payment",
+                          const Color(0xFF5F259F),
+                          Icons.card_giftcard,
+                        ),
+                        _promoCard(
+                          "5% Off Recharge",
+                          "On mobile prepaid",
+                          const Color(0xFF1565C0),
+                          Icons.phone_android,
+                        ),
+                        _promoCard(
+                          "Win Rewards",
+                          "Pay & earn scratch cards",
+                          const Color(0xFF00897B),
+                          Icons.stars,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // === RECENT TRANSACTIONS ===
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _sectionTitle("Recent Transactions"),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const TransactionHistoryScreen(),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          "View All",
+                          style: GoogleFonts.poppins(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const TransactionItem(
+                    icon: Icons.movie_creation,
+                    color: Colors.red,
+                    title: "Netflix Subscription",
+                    date: "Today, 12:30 PM",
+                    amount: "-₹499",
+                  ),
+                  const TransactionItem(
+                    icon: FontAwesomeIcons.spotify,
+                    color: Colors.green,
+                    title: "Spotify Premium",
+                    date: "Yesterday, 2:15 PM",
+                    amount: "-₹119",
+                  ),
+                  const TransactionItem(
+                    icon: Icons.arrow_downward,
+                    color: Color(0xFF5F259F),
+                    title: "Received from Mike",
+                    date: "Jun 22, 4:30 PM",
+                    amount: "+₹5,000",
+                    isPositive: true,
+                  ),
+                  const TransactionItem(
+                    icon: Icons.shopping_cart,
+                    color: Colors.orange,
+                    title: "Amazon",
+                    date: "Jun 20, 10:00 AM",
+                    amount: "-₹1,299",
+                  ),
+
+                  const SizedBox(height: 80), // Bottom padding for nav bar
                 ],
               ),
             ),
-
-            const SizedBox(height: 10),
-
-            // Dot Indicator
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(3, (index) {
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  height: 8,
-                  width: _currentCardIndex == index ? 20 : 8,
-                  decoration: BoxDecoration(
-                    color: _currentCardIndex == index
-                        ? const Color(0xFF6C63FF)
-                        : Colors.grey,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                );
-              }),
-            ),
-
-            const SizedBox(height: 30),
-
-            // Action Buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: _actionButton(context, Icons.north_east, "Send", () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SendMoneyScreen(),
-                      ),
-                    );
-                  }),
-                ),
-                Expanded(
-                  child: _actionButton(
-                    context,
-                    Icons.south_west,
-                    "Request",
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RequestMoneyScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: _actionButton(
-                    context,
-                    Icons.account_balance_wallet,
-                    "Check Balance",
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const WalletScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: _actionButton(context, Icons.more_horiz, "More", () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const MoreServicesScreen(),
-                      ),
-                    );
-                  }),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            // Recent Transactions header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Recent Transactions",
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const TransactionHistoryScreen(),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    "View All",
-                    style: TextStyle(color: Color(0xFF6C63FF)),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // Transaction List
-            const TransactionItem(
-              icon: Icons
-                  .movie_creation, // Fallback as brand icon missing in package
-              color: Colors.red,
-              title: "Netflix Subscription",
-              date: "Today, 12:30 PM",
-              amount: "-₹499",
-            ),
-            const TransactionItem(
-              icon: FontAwesomeIcons.spotify,
-              color: Colors.green,
-              title: "Spotify Premium",
-              date: "Yesterday, 2:15 PM",
-              amount: "-₹119",
-            ),
-            const TransactionItem(
-              icon: Icons
-                  .apple, // Replaced FontAwesomeIcons.apple (Icons.apple exists in standard set usually, if not we fall back to something else)
-              color: Colors.grey,
-              title: "Apple Services",
-              date: "Jun 24, 9:00 AM",
-              amount: "-₹99",
-            ),
-            const TransactionItem(
-              icon: Icons.arrow_downward, // Replaced FontAwesomeIcons.arrowDown
-              color: Color(0xFF6C63FF),
-              title: "Received from Mike",
-              date: "Jun 22, 4:30 PM",
-              amount: "+₹5,000",
-              isPositive: true,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _actionButton(
+  Widget _sectionTitle(String title) {
+    return Text(
+      title,
+      style: GoogleFonts.poppins(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: Theme.of(context).textTheme.bodyLarge?.color,
+      ),
+    );
+  }
+
+  Widget _circleAction(
     BuildContext context,
     IconData icon,
     String label,
+    Color color,
     VoidCallback onTap,
   ) {
     return GestureDetector(
@@ -284,199 +380,177 @@ class _DashboardTabState extends State<DashboardTab> {
       child: Column(
         children: [
           Container(
-            height: 60,
-            width: 60,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
+              color: color.withOpacity(0.12),
+              shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: Theme.of(context).iconTheme.color),
+            child: Icon(icon, color: color, size: 26),
           ),
           const SizedBox(height: 8),
           Text(
             label,
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Theme.of(context).textTheme.bodyMedium?.color,
+            ),
           ),
         ],
       ),
     );
   }
-} // End of _DashboardTabState
 
-class CreditCardWidget extends StatelessWidget {
-  const CreditCardWidget({super.key});
+  Widget _contactBubble(String name, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 16),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 26,
+            backgroundColor: color.withOpacity(0.15),
+            child: Text(
+              name[0],
+              style: GoogleFonts.poppins(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            name,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              color: Theme.of(context).textTheme.bodyMedium?.color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildServicesGrid(BuildContext context) {
+    final services = [
+      {
+        'icon': Icons.phone_android,
+        'label': 'Recharge',
+        'color': const Color(0xFF5F259F),
+      },
+      {
+        'icon': Icons.lightbulb,
+        'label': 'Electricity',
+        'color': const Color(0xFFF39C12),
+      },
+      {
+        'icon': Icons.water_drop,
+        'label': 'Water',
+        'color': const Color(0xFF2196F3),
+      },
+      {'icon': Icons.tv, 'label': 'DTH', 'color': const Color(0xFFE91E63)},
+      {
+        'icon': Icons.directions_car,
+        'label': 'FASTag',
+        'color': const Color(0xFF00897B),
+      },
+      {
+        'icon': Icons.wifi,
+        'label': 'Broadband',
+        'color': const Color(0xFF7B1FA2),
+      },
+      {
+        'icon': Icons.local_gas_station,
+        'label': 'Gas',
+        'color': const Color(0xFFFF5722),
+      },
+      {'icon': Icons.more_horiz, 'label': 'More', 'color': Colors.grey},
+    ];
+
+    return GridView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      itemCount: services.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.8,
+      ),
+      itemBuilder: (context, index) {
+        final svc = services[index];
+        final color = svc['color'] as Color;
+        return GestureDetector(
+          onTap: () {
+            if (svc['label'] == 'More') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MoreServicesScreen()),
+              );
+            }
+          },
+          child: Column(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(svc['icon'] as IconData, color: color, size: 24),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                svc['label'] as String,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _promoCard(String title, String subtitle, Color color, IconData icon) {
     return Container(
-      width: double.infinity,
-      height: 240, // Increased height
-      padding: const EdgeInsets.all(25),
+      width: 220,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFF2E2E3E),
-            Color(0xFF000000),
-          ], // Sleek black card (Original)
+        gradient: LinearGradient(
+          colors: [color, color.withOpacity(0.7)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(25),
-        // Shadow removed as per user request to fix "shades" issue
-        image: const DecorationImage(
-          image: NetworkImage(
-            "https://www.transparenttextures.com/patterns/cubes.png",
-          ), // Subtle texture
-          opacity: 0.1,
-          repeat: ImageRepeat.repeat,
-        ),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Top Row: Bank Name and Tier
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF1E88E5), // SBI Blue
-                      shape: BoxShape.circle,
-                    ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          width: 14, // Inner circle
-                          height: 14,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          child: Container(
-                            width: 5, // The keyhole slot
-                            height: 16,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "SBI Card",
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                      Text(
-                        "Debit",
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.white70,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Text(
-                "Platinum",
-                style: GoogleFonts.playfairDisplay(
-                  // Using a fancier font if available, or fallback
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-          ),
-
+          Icon(icon, color: Colors.white.withOpacity(0.8), size: 32),
           const Spacer(),
-
-          // Balance / Name with Rotated WiFi
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "VAMSIDHAR M",
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ],
-              ),
-              const RotatedBox(
-                quarterTurns: 1, // Face right
-                child: Icon(Icons.wifi, color: Colors.white54, size: 28),
-              ),
-            ],
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
           ),
-
-          const Spacer(),
-
-          // Bottom Row: Number, Expiry, Logo
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "**** **** **** 3942",
-                    style: GoogleFonts.sourceCodePro(
-                      color: Colors.white,
-                      fontSize: 18, // Increased size
-                      fontWeight: FontWeight.bold, // Bolder
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "VALID THRU 12/26",
-                    style: GoogleFonts.sourceCodePro(
-                      color: Colors.white70,
-                      fontSize: 12, // Increased size
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              const Icon(
-                FontAwesomeIcons.ccVisa,
-                color: Colors.white,
-                size: 40,
-              ),
-            ],
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
           ),
         ],
       ),
@@ -484,6 +558,9 @@ class CreditCardWidget extends StatelessWidget {
   }
 }
 
+// ============================================
+// TRANSACTION ITEM WIDGET (Shared)
+// ============================================
 class TransactionItem extends StatelessWidget {
   final IconData icon;
   final Color color;
@@ -504,186 +581,295 @@ class TransactionItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TweenAnimationBuilder(
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeOut,
-      builder: (context, double value, child) {
-        return Transform.translate(
-          offset: Offset(0, 20 * (1 - value)),
-          child: Opacity(opacity: value, child: child),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 15),
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05), // Softer shadow
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.08),
         ),
-        child: Row(
-          children: [
-            Container(
-              height: 50,
-              width: 50,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Center(child: FaIcon(icon, color: color, size: 24)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            height: 44,
+            width: 44,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
+            child: Center(child: FaIcon(icon, color: color, size: 20)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
                   ),
-                  Text(
-                    date,
-                    style: GoogleFonts.poppins(
-                      color: Colors.grey,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                Text(
+                  date,
+                  style: GoogleFonts.poppins(color: Colors.grey, fontSize: 11),
+                ),
+              ],
             ),
-            Text(
-              amount,
-              style: GoogleFonts.poppins(
-                color: isPositive
-                    ? const Color(0xFF00BFA5)
-                    : Theme.of(context).textTheme.bodyLarge?.color,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+          ),
+          Text(
+            amount,
+            style: GoogleFonts.poppins(
+              color: isPositive
+                  ? AppColors.success
+                  : Theme.of(context).textTheme.bodyLarge?.color,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// 2. AI STATS SCREEN
+// ============================================
+// 2. AI STATS / INSIGHTS SCREEN
+// ============================================
 class StatsTab extends StatelessWidget {
   const StatsTab({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            Text(
-              "AI Insights",
-              style: GoogleFonts.poppins(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).textTheme.bodyLarge?.color,
-              ),
-            ),
-            const SizedBox(height: 50),
-            Container(
-              height: 250,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: BarChart(
-                BarChartData(
-                  borderData: FlBorderData(show: false),
-                  gridData: FlGridData(show: false),
-                  titlesData: FlTitlesData(
-                    show: true,
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (value, meta) {
-                          const style = TextStyle(
-                            color: Colors.grey,
-                            fontSize: 10,
-                          );
-                          String text;
-                          switch (value.toInt()) {
-                            case 1:
-                              text = 'Mon';
-                              break;
-                            case 2:
-                              text = 'Tue';
-                              break;
-                            case 3:
-                              text = 'Wed';
-                              break;
-                            case 4:
-                              text = 'Thu';
-                              break;
-                            case 5:
-                              text = 'Fri';
-                              break;
-                            case 6:
-                              text = 'Sat';
-                              break;
-                            case 7:
-                              text = 'Sun';
-                              break;
-                            default:
-                              text = '';
-                          }
-                          return Text(text, style: style);
-                        },
-                      ),
-                    ),
-                    leftTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Container(
+              decoration: BoxDecoration(gradient: AppColors.headerGradient),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  child: Text(
+                    "AI Insights",
+                    style: GoogleFonts.poppins(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
-                  barGroups: [
-                    makeGroupData(1, 5, const Color(0xFF6C63FF)),
-                    makeGroupData(2, 8, Colors.redAccent),
-                    makeGroupData(3, 6, const Color(0xFF00BFA5)),
-                    makeGroupData(4, 10, const Color(0xFF6C63FF)),
-                    makeGroupData(5, 7, Colors.orange),
-                    makeGroupData(6, 4, const Color(0xFF6C63FF)),
-                    makeGroupData(7, 9, const Color(0xFF00BFA5)),
-                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            const Text(
-              "Weekly Spending Analysis",
-              style: TextStyle(color: Colors.grey),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Summary cards
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _insightCard(
+                          "Total Spent",
+                          "₹12,450",
+                          Icons.trending_down,
+                          AppColors.error,
+                          isDark,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _insightCard(
+                          "Total Received",
+                          "₹25,000",
+                          Icons.trending_up,
+                          AppColors.success,
+                          isDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    "Weekly Spending",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    height: 250,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Theme.of(context).dividerColor.withOpacity(0.08),
+                      ),
+                    ),
+                    child: BarChart(
+                      BarChartData(
+                        borderData: FlBorderData(show: false),
+                        gridData: const FlGridData(show: false),
+                        titlesData: FlTitlesData(
+                          show: true,
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              getTitlesWidget: (value, meta) {
+                                const style = TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 10,
+                                );
+                                String text;
+                                switch (value.toInt()) {
+                                  case 1:
+                                    text = 'Mon';
+                                    break;
+                                  case 2:
+                                    text = 'Tue';
+                                    break;
+                                  case 3:
+                                    text = 'Wed';
+                                    break;
+                                  case 4:
+                                    text = 'Thu';
+                                    break;
+                                  case 5:
+                                    text = 'Fri';
+                                    break;
+                                  case 6:
+                                    text = 'Sat';
+                                    break;
+                                  case 7:
+                                    text = 'Sun';
+                                    break;
+                                  default:
+                                    text = '';
+                                }
+                                return Text(text, style: style);
+                              },
+                            ),
+                          ),
+                          leftTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                        ),
+                        barGroups: [
+                          _barGroup(1, 5, AppColors.primary),
+                          _barGroup(2, 8, AppColors.primaryLight),
+                          _barGroup(3, 6, AppColors.accent),
+                          _barGroup(4, 10, AppColors.primary),
+                          _barGroup(5, 7, AppColors.warning),
+                          _barGroup(6, 4, AppColors.primaryLight),
+                          _barGroup(7, 9, AppColors.accent),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    "Spending by Category",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _categoryRow(
+                    context,
+                    "Entertainment",
+                    "₹618",
+                    0.35,
+                    Colors.red,
+                  ),
+                  _categoryRow(
+                    context,
+                    "Shopping",
+                    "₹1,299",
+                    0.55,
+                    Colors.orange,
+                  ),
+                  _categoryRow(context, "Food", "₹450", 0.25, Colors.green),
+                  _categoryRow(
+                    context,
+                    "Subscriptions",
+                    "₹717",
+                    0.40,
+                    AppColors.primary,
+                  ),
+                  const SizedBox(height: 80),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  BarChartGroupData makeGroupData(int x, double y, Color color) {
+  Widget _insightCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+    bool isDark,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  BarChartGroupData _barGroup(int x, double y, Color color) {
     return BarChartGroupData(
       x: x,
       barRods: [
@@ -701,115 +887,51 @@ class StatsTab extends StatelessWidget {
       ],
     );
   }
-}
 
-class AddCardWidget extends StatelessWidget {
-  const AddCardWidget({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const AddCardScreen()),
-        );
-      },
-      child: Container(
-        width: double.infinity,
-        height: 240, // Match Card Height
-        padding: const EdgeInsets.all(25),
-        decoration: BoxDecoration(
-          color: const Color(0xFF2D2D44).withOpacity(0.3),
-          borderRadius: BorderRadius.circular(25),
-        ),
-        child: CustomPaint(
-          painter: DottedBorderPainter(
-            color: Colors.white24,
-            strokeWidth: 2,
-            gap: 5,
+  Widget _categoryRow(
+    BuildContext context,
+    String name,
+    String amount,
+    double pct,
+    Color color,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                name,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+              ),
+              Text(
+                amount,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
           ),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6C63FF).withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.add, color: Colors.white, size: 30),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  "Add Card",
-                  style: GoogleFonts.poppins(
-                    color:
-                        Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.color?.withOpacity(0.7) ??
-                        Colors.grey,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: pct,
+              minHeight: 6,
+              backgroundColor: color.withOpacity(0.1),
+              valueColor: AlwaysStoppedAnimation(color),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
-}
-
-class DottedBorderPainter extends CustomPainter {
-  final Color color;
-  final double strokeWidth;
-  final double gap;
-
-  DottedBorderPainter({
-    required this.color,
-    this.strokeWidth = 2,
-    this.gap = 5,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke;
-
-    final Path path = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(0, 0, size.width, size.height),
-          const Radius.circular(25),
-        ),
-      );
-
-    // Simplified manual dot drawing
-    Path metricPath = path;
-    for (ui.PathMetric metric in metricPath.computeMetrics()) {
-      double distance = 0.0;
-      while (distance < metric.length) {
-        // Draw a dot
-        // We want dots, so drawCircle is better than drawPath(rect)
-        // Extract position
-        final ui.Tangent? tangent = metric.getTangentForOffset(distance);
-        if (tangent != null) {
-          canvas.drawCircle(
-            tangent.position,
-            strokeWidth / 2,
-            paint..style = PaintingStyle.fill,
-          );
-        }
-        distance += gap + strokeWidth;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

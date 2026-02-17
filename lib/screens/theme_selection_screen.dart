@@ -7,93 +7,120 @@ class ThemeSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Theme Settings",
+          "Theme",
           style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         centerTitle: true,
       ),
-      body: ValueListenableBuilder<ThemeMode>(
-        valueListenable: ThemeManager().themeMode,
-        builder: (context, currentMode, child) {
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              _buildThemeOption(
-                context,
-                "Light Mode",
-                Icons.wb_sunny_outlined,
-                ThemeMode.light,
-                currentMode == ThemeMode.light,
-              ),
-              const SizedBox(height: 15),
-              _buildThemeOption(
-                context,
-                "Dark Mode",
-                Icons.dark_mode_outlined,
-                ThemeMode.dark,
-                currentMode == ThemeMode.dark,
-              ),
-              const SizedBox(height: 15),
-              _buildThemeOption(
-                context,
-                "System Default",
-                Icons.settings_system_daydream_outlined,
-                ThemeMode.system,
-                currentMode == ThemeMode.system,
-              ),
-            ],
-          );
-        },
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: ValueListenableBuilder<ThemeMode>(
+          valueListenable: ThemeManager().themeMode,
+          builder: (context, mode, _) {
+            return Column(
+              children: [
+                _themeOption(
+                  context,
+                  "Light Mode",
+                  Icons.light_mode,
+                  ThemeMode.light,
+                  mode,
+                  isDark,
+                ),
+                const SizedBox(height: 12),
+                _themeOption(
+                  context,
+                  "Dark Mode",
+                  Icons.dark_mode,
+                  ThemeMode.dark,
+                  mode,
+                  isDark,
+                ),
+                const SizedBox(height: 12),
+                _themeOption(
+                  context,
+                  "System Default",
+                  Icons.settings_suggest,
+                  ThemeMode.system,
+                  mode,
+                  isDark,
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildThemeOption(
+  Widget _themeOption(
     BuildContext context,
     String title,
     IconData icon,
-    ThemeMode mode,
-    bool isSelected,
+    ThemeMode themeMode,
+    ThemeMode currentMode,
+    bool isDark,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSelected = currentMode == themeMode;
 
     return GestureDetector(
-      onTap: () {
-        ThemeManager().setTheme(mode);
-      },
+      onTap: () => ThemeManager().setTheme(themeMode),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF2D2D44) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-          border: isSelected
-              ? Border.all(color: const Color(0xFF6C63FF), width: 2)
-              : Border.all(color: Colors.transparent),
+          color: isDark ? AppColors.darkCard : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.primary
+                : Theme.of(context).dividerColor.withOpacity(0.06),
+            width: isSelected ? 2 : 1,
+          ),
         ),
         child: Row(
           children: [
-            Icon(icon, color: const Color(0xFF6C63FF)),
-            const SizedBox(width: 20),
-            Text(
-              title,
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: (isSelected ? AppColors.primary : Colors.grey)
+                    .withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: isSelected ? AppColors.primary : Colors.grey,
+                size: 24,
               ),
             ),
-            const Spacer(),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                  color: isSelected
+                      ? AppColors.primary
+                      : Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+              ),
+            ),
             if (isSelected)
-              const Icon(Icons.check_circle, color: Color(0xFF6C63FF)),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check, color: Colors.white, size: 16),
+              ),
           ],
         ),
       ),
