@@ -29,7 +29,7 @@ class PersonalInfoScreen extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 50,
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                     child: const Icon(
                       Icons.person,
                       size: 52,
@@ -160,7 +160,7 @@ class PersonalInfoScreen extends StatelessWidget {
             color: isDark ? AppColors.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Theme.of(context).dividerColor.withOpacity(0.08),
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
             ),
           ),
           child: TextField(
