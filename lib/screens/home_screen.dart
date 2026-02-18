@@ -1,15 +1,25 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/theme_manager.dart';
 import 'send_money_screen.dart';
-import 'request_money_screen.dart';
+
 import 'wallet_screen.dart';
 import 'more_services_screen.dart';
 import 'transaction_history_screen.dart';
-import 'add_card_screen.dart';
+import '../utils/transaction_manager.dart';
+
 import 'profile_screen.dart';
+import 'services/mobile_recharge_page.dart';
+import 'services/electricity_page.dart';
+import 'services/water_page.dart';
+import 'services/dth_recharge_page.dart';
+import 'services/fastag_page.dart';
+import 'services/broadband_page.dart';
+import 'services/piped_gas_page.dart';
 
 // ============================================
 // 1. DASHBOARD / HOME SCREEN (PhonePe style)
@@ -22,10 +32,65 @@ class DashboardTab extends StatefulWidget {
 }
 
 class _DashboardTabState extends State<DashboardTab> {
+  // Banner carousel state
+  final PageController _bannerController = PageController();
+  Timer? _bannerTimer;
+  int _currentBannerIndex = 0;
+
+  final List<_BannerData> _banners = const [
+    _BannerData(
+      gradient: [Color(0xFF6C63FF), Color(0xFF4834DF)],
+      icon: Icons.local_offer,
+      title: '50% Cashback',
+      subtitle: 'On your first UPI transaction!\nUse code: FIRST50',
+    ),
+    _BannerData(
+      gradient: [Color(0xFF00B894), Color(0xFF00897B)],
+      icon: Icons.people_alt,
+      title: 'Refer & Earn ₹200',
+      subtitle: 'Invite friends and earn rewards\nfor every referral!',
+    ),
+    _BannerData(
+      gradient: [Color(0xFFE17055), Color(0xFFD63031)],
+      icon: Icons.receipt_long,
+      title: 'Pay Bills & Win',
+      subtitle: 'Pay electricity, water & gas bills\nand win scratch cards!',
+    ),
+    _BannerData(
+      gradient: [Color(0xFF0984E3), Color(0xFF6C5CE7)],
+      icon: Icons.card_giftcard,
+      title: 'Rewards Unlocked!',
+      subtitle: 'You have 3 unclaimed rewards\nRedeem now →',
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _startAutoScroll();
+  }
+
+  @override
+  void dispose() {
+    _bannerTimer?.cancel();
+    _bannerController.dispose();
+    super.dispose();
+  }
+
+  void _startAutoScroll() {
+    _bannerTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted) return;
+      final next = (_currentBannerIndex + 1) % _banners.length;
+      _bannerController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -89,6 +154,32 @@ class _DashboardTabState extends State<DashboardTab> {
                               color: Colors.white,
                             ),
                           ),
+                          // Dark / Light mode toggle
+                          ValueListenableBuilder<ThemeMode>(
+                            valueListenable: ThemeManager().themeMode,
+                            builder: (context, mode, _) {
+                              final isDark = mode == ThemeMode.dark;
+                              return IconButton(
+                                onPressed: () {
+                                  ThemeManager().toggleTheme(!isDark);
+                                },
+                                icon: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  transitionBuilder: (child, anim) =>
+                                      RotationTransition(
+                                        turns: anim,
+                                        child: child,
+                                      ),
+                                  child: Icon(
+                                    isDark ? Icons.light_mode : Icons.dark_mode,
+                                    key: ValueKey(isDark),
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                           IconButton(
                             onPressed: () {},
                             icon: const Icon(
@@ -98,40 +189,126 @@ class _DashboardTabState extends State<DashboardTab> {
                           ),
                         ],
                       ),
-
-                      const SizedBox(height: 20),
-
-                      // Search bar
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.search,
-                              color: Colors.white70,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              "Pay by name or phone number",
-                              style: GoogleFonts.poppins(
-                                color: Colors.white54,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
+              ),
+            ),
+          ),
+
+          // === PROMOTIONAL BANNER CAROUSEL ===
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Column(
+                children: [
+                  SizedBox(
+                    height: 150,
+                    child: PageView.builder(
+                      controller: _bannerController,
+                      itemCount: _banners.length,
+                      onPageChanged: (index) {
+                        setState(() => _currentBannerIndex = index);
+                      },
+                      itemBuilder: (context, index) {
+                        final banner = _banners[index];
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: banner.gradient,
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: banner.gradient.first.withValues(
+                                  alpha: 0.35,
+                                ),
+                                blurRadius: 12,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Icon(
+                                    banner.icon,
+                                    color: Colors.white,
+                                    size: 32,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        banner.title,
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        banner.subtitle,
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.85,
+                                          ),
+                                          fontSize: 12,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.arrow_forward_ios,
+                                  color: Colors.white.withValues(alpha: 0.6),
+                                  size: 18,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Dot indicators
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(_banners.length, (index) {
+                      final isActive = index == _currentBannerIndex;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        height: 8,
+                        width: isActive ? 24 : 8,
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? AppColors.primary
+                              : Colors.grey.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
               ),
             ),
           ),
@@ -317,34 +494,34 @@ class _DashboardTabState extends State<DashboardTab> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const TransactionItem(
-                    icon: Icons.movie_creation,
-                    color: Colors.red,
-                    title: "Netflix Subscription",
-                    date: "Today, 12:30 PM",
-                    amount: "-₹499",
-                  ),
-                  const TransactionItem(
-                    icon: FontAwesomeIcons.spotify,
-                    color: Colors.green,
-                    title: "Spotify Premium",
-                    date: "Yesterday, 2:15 PM",
-                    amount: "-₹119",
-                  ),
-                  const TransactionItem(
-                    icon: Icons.arrow_downward,
-                    color: Color(0xFF5F259F),
-                    title: "Received from Mike",
-                    date: "Jun 22, 4:30 PM",
-                    amount: "+₹5,000",
-                    isPositive: true,
-                  ),
-                  const TransactionItem(
-                    icon: Icons.shopping_cart,
-                    color: Colors.orange,
-                    title: "Amazon",
-                    date: "Jun 20, 10:00 AM",
-                    amount: "-₹1,299",
+                  const SizedBox(height: 8),
+                  ValueListenableBuilder<List<Transaction>>(
+                    valueListenable: TransactionManager().transactionsNotifier,
+                    builder: (context, transactions, _) {
+                      if (transactions.isEmpty) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Text(
+                              "No recent transactions",
+                              style: GoogleFonts.poppins(color: Colors.grey),
+                            ),
+                          ),
+                        );
+                      }
+                      return Column(
+                        children: transactions.take(5).map((t) {
+                          return TransactionItem(
+                            icon: t.icon,
+                            color: t.color,
+                            title: t.title,
+                            date: t.date,
+                            amount: t.amount,
+                            isPositive: t.isPositive,
+                          );
+                        }).toList(),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 80), // Bottom padding for nav bar
@@ -383,7 +560,7 @@ class _DashboardTabState extends State<DashboardTab> {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 26),
@@ -410,7 +587,7 @@ class _DashboardTabState extends State<DashboardTab> {
         children: [
           CircleAvatar(
             radius: 26,
-            backgroundColor: color.withOpacity(0.15),
+            backgroundColor: color.withValues(alpha: 0.15),
             child: Text(
               name[0],
               style: GoogleFonts.poppins(
@@ -484,10 +661,46 @@ class _DashboardTabState extends State<DashboardTab> {
         final color = svc['color'] as Color;
         return GestureDetector(
           onTap: () {
-            if (svc['label'] == 'More') {
+            final label = svc['label'] as String;
+            if (label == 'More') {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const MoreServicesScreen()),
+              );
+            } else if (label == 'Recharge') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MobileRechargePage()),
+              );
+            } else if (label == 'Electricity') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ElectricityPage()),
+              );
+            } else if (label == 'Water') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const WaterPage()),
+              );
+            } else if (label == 'DTH') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DthRechargePage()),
+              );
+            } else if (label == 'FASTag') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const FastagPage()),
+              );
+            } else if (label == 'Broadband') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BroadbandPage()),
+              );
+            } else if (label == 'Gas') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PipedGasPage()),
               );
             }
           },
@@ -497,7 +710,7 @@ class _DashboardTabState extends State<DashboardTab> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(svc['icon'] as IconData, color: color, size: 24),
@@ -527,7 +740,7 @@ class _DashboardTabState extends State<DashboardTab> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [color, color.withOpacity(0.7)],
+          colors: [color, color.withValues(alpha: 0.7)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -537,7 +750,7 @@ class _DashboardTabState extends State<DashboardTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, color: Colors.white.withOpacity(0.8), size: 32),
+          Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 32),
           const Spacer(),
           Text(
             title,
@@ -588,7 +801,7 @@ class TransactionItem extends StatelessWidget {
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.08),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
         ),
       ),
       child: Row(
@@ -597,7 +810,7 @@ class TransactionItem extends StatelessWidget {
             height: 44,
             width: 44,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(child: FaIcon(icon, color: color, size: 20)),
@@ -676,29 +889,95 @@ class StatsTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Summary cards
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _insightCard(
-                          "Total Spent",
-                          "₹12,450",
-                          Icons.trending_down,
-                          AppColors.error,
-                          isDark,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _insightCard(
-                          "Total Received",
-                          "₹25,000",
-                          Icons.trending_up,
-                          AppColors.success,
-                          isDark,
-                        ),
-                      ),
-                    ],
+                  ValueListenableBuilder<List<Transaction>>(
+                    valueListenable: TransactionManager().transactionsNotifier,
+                    builder: (context, transactions, _) {
+                      double totalSpent = 0;
+                      double totalReceived = 0;
+                      for (var t in transactions) {
+                        String clean = t.amount.replaceAll(
+                          RegExp(r'[^0-9.]'),
+                          '',
+                        );
+                        double val = double.tryParse(clean) ?? 0;
+                        if (t.isPositive) {
+                          totalReceived += val;
+                        } else {
+                          totalSpent += val;
+                        }
+                      }
+
+                      return Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _insightCard(
+                                  "Total Spent",
+                                  "₹${totalSpent.toStringAsFixed(0)}",
+                                  Icons.trending_down,
+                                  AppColors.error,
+                                  isDark,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _insightCard(
+                                  "Total Received",
+                                  "₹${totalReceived.toStringAsFixed(0)}",
+                                  Icons.trending_up,
+                                  AppColors.success,
+                                  isDark,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          GestureDetector(
+                            onTap: () =>
+                                _showSplitDialog(context, transactions),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.purple.shade400,
+                                    Colors.purple.shade700,
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.purple.withValues(alpha: 0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.call_split,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "Split an Expense with Friends",
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 20),
                   Text(
@@ -717,7 +996,9 @@ class StatsTab extends StatelessWidget {
                       color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: Theme.of(context).dividerColor.withOpacity(0.08),
+                        color: Theme.of(
+                          context,
+                        ).dividerColor.withValues(alpha: 0.08),
                       ),
                     ),
                     child: BarChart(
@@ -828,6 +1109,151 @@ class StatsTab extends StatelessWidget {
     );
   }
 
+  void _showSplitDialog(BuildContext context, List<Transaction> transactions) {
+    // Filter debit transactions
+    final expenses = transactions.where((t) => !t.isPositive).toList();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              "Select Expense to Split",
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: expenses.isEmpty
+                  ? Center(
+                      child: Text(
+                        "No recent expenses to split",
+                        style: GoogleFonts.poppins(color: Colors.grey),
+                      ),
+                    )
+                  : ListView.separated(
+                      itemCount: expenses.length,
+                      separatorBuilder: (_, __) => const Divider(),
+                      itemBuilder: (ctx, index) {
+                        final t = expenses[index];
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: t.color.withValues(alpha: 0.1),
+                            child: Icon(t.icon, color: t.color, size: 20),
+                          ),
+                          title: Text(t.title, style: GoogleFonts.poppins()),
+                          subtitle: Text(
+                            t.date,
+                            style: GoogleFonts.poppins(fontSize: 12),
+                          ),
+                          trailing: Text(
+                            t.amount,
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.error,
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            _calculateSplit(context, t);
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _calculateSplit(BuildContext context, Transaction t) {
+    // For simplicity, just split by 3
+    final amountStr = t.amount.replaceAll(RegExp(r'[^0-9.]'), '');
+    final amount = double.tryParse(amountStr) ?? 0;
+    final share = amount / 3;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          "Split with 2 Friends",
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Total: ₹${amount.toStringAsFixed(0)}",
+              style: GoogleFonts.poppins(fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Each pays: ₹${share.toStringAsFixed(0)}",
+              style: GoogleFonts.poppins(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "(Assuming 3 people including you)",
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text("Cancel", style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Split request sent to friends!")),
+              );
+              // Optimistically add split transactions
+              TransactionManager().addSplitTransaction(
+                "Split: ${t.title}",
+                share,
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: Text(
+              "Request Money",
+              style: GoogleFonts.poppins(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _insightCard(
     String label,
     String value,
@@ -840,7 +1266,7 @@ class StatsTab extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -926,7 +1352,7 @@ class StatsTab extends StatelessWidget {
             child: LinearProgressIndicator(
               value: pct,
               minHeight: 6,
-              backgroundColor: color.withOpacity(0.1),
+              backgroundColor: color.withValues(alpha: 0.1),
               valueColor: AlwaysStoppedAnimation(color),
             ),
           ),
@@ -934,4 +1360,19 @@ class StatsTab extends StatelessWidget {
       ),
     );
   }
+}
+
+// Banner data model
+class _BannerData {
+  final List<Color> gradient;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _BannerData({
+    required this.gradient,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
 }

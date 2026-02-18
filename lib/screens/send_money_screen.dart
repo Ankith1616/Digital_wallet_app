@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/theme_manager.dart';
+import '../utils/transaction_manager.dart';
 
 class SendMoneyScreen extends StatelessWidget {
   const SendMoneyScreen({super.key});
@@ -128,7 +129,7 @@ class SendMoneyScreen extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 26,
-            backgroundColor: color.withOpacity(0.15),
+            backgroundColor: color.withValues(alpha: 0.15),
             child: Text(
               name[0],
               style: GoogleFonts.poppins(
@@ -163,14 +164,14 @@ class SendMoneyScreen extends StatelessWidget {
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.06),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
         ),
       ),
       child: ListTile(
         dense: true,
         leading: CircleAvatar(
           radius: 20,
-          backgroundColor: AppColors.primary.withOpacity(0.1),
+          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
           child: Text(
             name[0],
             style: GoogleFonts.poppins(
@@ -188,12 +189,173 @@ class SendMoneyScreen extends StatelessWidget {
           style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
         ),
         trailing: Icon(Icons.chevron_right, size: 20, color: Colors.grey[400]),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Pay $name — feature coming soon!")),
-          );
-        },
+        onTap: () => _showPaymentSheet(context, name, isDark),
       ),
+    );
+  }
+
+  void _showPaymentSheet(BuildContext context, String name, bool isDark) {
+    final amountCtrl = TextEditingController();
+    final noteCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            24 + MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                child: Text(
+                  name[0],
+                  style: GoogleFonts.poppins(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "Pay $name",
+                style: GoogleFonts.poppins(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(ctx).textTheme.bodyLarge?.color,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkCard : Colors.grey[50],
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: TextField(
+                  controller: amountCtrl,
+                  keyboardType: TextInputType.number,
+                  style: GoogleFonts.poppins(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(ctx).textTheme.bodyLarge?.color,
+                  ),
+                  decoration: InputDecoration(
+                    prefixText: "\u20B9 ",
+                    prefixStyle: GoogleFonts.poppins(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                    hintText: "Enter amount",
+                    hintStyle: GoogleFonts.poppins(
+                      color: Colors.grey[400],
+                      fontSize: 18,
+                    ),
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkCard : Colors.grey[50],
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Theme.of(ctx).dividerColor.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: TextField(
+                  controller: noteCtrl,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Theme.of(ctx).textTheme.bodyLarge?.color,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: "Add a note (optional)",
+                    hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    final amount = amountCtrl.text.isEmpty
+                        ? '0'
+                        : amountCtrl.text;
+                    TransactionManager().addTransaction(
+                      Transaction(
+                        id: DateTime.now().millisecondsSinceEpoch.toString(),
+                        title: "Sent to $name",
+                        date: "Just Now",
+                        amount: "- ₹$amount",
+                        isPositive: false,
+                        icon: Icons.person,
+                        color: AppColors.primary,
+                        details: noteCtrl.text.isEmpty
+                            ? 'Transfer'
+                            : noteCtrl.text,
+                      ),
+                    );
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("\u20B9$amount sent to $name!"),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    "Send Now",
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -56,7 +56,9 @@ class _RequestMoneyScreenState extends State<RequestMoneyScreen> {
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkCard : Colors.grey[50],
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                ),
               ),
               child: TextField(
                 controller: _amountController,
@@ -118,8 +120,8 @@ class _RequestMoneyScreenState extends State<RequestMoneyScreen> {
                             ),
                             child: CircleAvatar(
                               radius: 26,
-                              backgroundColor: AppColors.primary.withOpacity(
-                                0.1,
+                              backgroundColor: AppColors.primary.withValues(
+                                alpha: 0.1,
                               ),
                               child: Text(
                                 _contacts[index][0],

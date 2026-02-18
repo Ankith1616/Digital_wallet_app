@@ -40,6 +40,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
               "Change Password",
               "Update your account password",
               isDark,
+              () => _showChangePasswordDialog(context, isDark),
             ),
             const SizedBox(height: 10),
             _actionTile(
@@ -48,6 +49,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
               "Change UPI PIN",
               "Update your UPI transaction PIN",
               isDark,
+              () => _showChangeUpiPinDialog(context, isDark),
             ),
             const SizedBox(height: 20),
 
@@ -94,26 +96,274 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
     );
   }
 
+  void _showChangePasswordDialog(BuildContext context, bool isDark) {
+    final oldPwdCtrl = TextEditingController();
+    final newPwdCtrl = TextEditingController();
+    final confirmPwdCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            24 + MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                "Change Password",
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(ctx).textTheme.bodyLarge?.color,
+                ),
+              ),
+              const SizedBox(height: 20),
+              _dialogField(
+                ctx,
+                "Current Password",
+                oldPwdCtrl,
+                isDark,
+                obscure: true,
+              ),
+              const SizedBox(height: 12),
+              _dialogField(
+                ctx,
+                "New Password",
+                newPwdCtrl,
+                isDark,
+                obscure: true,
+              ),
+              const SizedBox(height: 12),
+              _dialogField(
+                ctx,
+                "Confirm Password",
+                confirmPwdCtrl,
+                isDark,
+                obscure: true,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Password changed successfully!"),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    "Update Password",
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showChangeUpiPinDialog(BuildContext context, bool isDark) {
+    final oldPinCtrl = TextEditingController();
+    final newPinCtrl = TextEditingController();
+    final confirmPinCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            24 + MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                "Change UPI PIN",
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(ctx).textTheme.bodyLarge?.color,
+                ),
+              ),
+              const SizedBox(height: 20),
+              _dialogField(
+                ctx,
+                "Current UPI PIN",
+                oldPinCtrl,
+                isDark,
+                obscure: true,
+                isNumber: true,
+              ),
+              const SizedBox(height: 12),
+              _dialogField(
+                ctx,
+                "New UPI PIN",
+                newPinCtrl,
+                isDark,
+                obscure: true,
+                isNumber: true,
+              ),
+              const SizedBox(height: 12),
+              _dialogField(
+                ctx,
+                "Confirm New PIN",
+                confirmPinCtrl,
+                isDark,
+                obscure: true,
+                isNumber: true,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("UPI PIN changed successfully!"),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    "Update UPI PIN",
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _dialogField(
+    BuildContext context,
+    String hint,
+    TextEditingController controller,
+    bool isDark, {
+    bool obscure = false,
+    bool isNumber = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+        ),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: obscure,
+        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+        style: GoogleFonts.poppins(
+          fontSize: 14,
+          color: Theme.of(context).textTheme.bodyLarge?.color,
+        ),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+          border: InputBorder.none,
+        ),
+      ),
+    );
+  }
+
   Widget _actionTile(
     BuildContext context,
     IconData icon,
     String title,
     String subtitle,
     bool isDark,
+    VoidCallback onTap,
   ) {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.06),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
         ),
       ),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.08),
+            color: AppColors.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: AppColors.primary, size: 20),
@@ -127,11 +377,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
           style: GoogleFonts.poppins(color: Colors.grey, fontSize: 11),
         ),
         trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-        onTap: () {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text("$title — coming soon!")));
-        },
+        onTap: onTap,
       ),
     );
   }
@@ -150,14 +396,14 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.06),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
         ),
       ),
       child: SwitchListTile(
         secondary: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.08),
+            color: AppColors.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: AppColors.primary, size: 20),
@@ -172,7 +418,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
         ),
         value: value,
         onChanged: onChanged,
-        activeColor: AppColors.primary,
+        activeThumbColor: AppColors.primary,
         contentPadding: EdgeInsets.zero,
       ),
     );
