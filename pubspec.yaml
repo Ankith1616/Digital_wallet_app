@@ -38,6 +38,7 @@ dependencies:
   google_fonts: ^6.1.0        # Makes the text look modern
   fl_chart: ^0.65.0           # Creates the AI graphs
   font_awesome_flutter: ^10.6.0 # Adds the cool brand icons (Google, Apple)
+  mobile_scanner: ^6.0.2        # QR/Barcode scanning with camera
   # -------------------------------
 
 dev_dependencies:
