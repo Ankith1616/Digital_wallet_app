@@ -1,9 +1,281 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../utils/theme_manager.dart';
+import 'send_money_screen.dart';
+import 'wallet_screen.dart';
 
-class ScannerTab extends StatelessWidget {
+class ScannerTab extends StatefulWidget {
   const ScannerTab({super.key});
+
+  @override
+  State<ScannerTab> createState() => _ScannerTabState();
+}
+
+class _ScannerTabState extends State<ScannerTab> {
+  final MobileScannerController _controller = MobileScannerController(
+    detectionSpeed: DetectionSpeed.normal,
+    facing: CameraFacing.back,
+    torchEnabled: false,
+  );
+
+  bool _hasScanned = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (_hasScanned) return;
+    final barcode = capture.barcodes.firstOrNull;
+    if (barcode == null || barcode.rawValue == null) return;
+
+    setState(() => _hasScanned = true);
+    _controller.stop();
+    _showScanResult(barcode.rawValue!);
+  }
+
+  void _showScanResult(String data) {
+    final amountController = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            24 + MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Success check
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.qr_code_2,
+                  color: AppColors.success,
+                  size: 40,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Text(
+                "QR Code Detected!",
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(ctx).textTheme.bodyLarge?.color,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Scanned data
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkCard : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.link, color: AppColors.primary, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        data,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: Theme.of(ctx).textTheme.bodyMedium?.color,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Amount field
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkCard : Colors.grey[50],
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: TextField(
+                  controller: amountController,
+                  keyboardType: TextInputType.number,
+                  style: GoogleFonts.poppins(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(ctx).textTheme.bodyLarge?.color,
+                  ),
+                  decoration: InputDecoration(
+                    prefixText: "₹ ",
+                    prefixStyle: GoogleFonts.poppins(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                    hintText: "Enter amount",
+                    hintStyle: GoogleFonts.poppins(
+                      color: Colors.grey[400],
+                      fontSize: 18,
+                    ),
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Pay Now button
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _showPaymentSuccess();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    "Pay Now",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Scan Again
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _resetScanner();
+                },
+                child: Text(
+                  "Scan Again",
+                  style: GoogleFonts.poppins(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    ).whenComplete(() {
+      if (_hasScanned) _resetScanner();
+    });
+  }
+
+  void _showPaymentSuccess() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle,
+                color: AppColors.success,
+                size: 48,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Payment Successful!",
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Your transaction has been completed.",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _resetScanner();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  "Done",
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _resetScanner() {
+    setState(() => _hasScanned = false);
+    _controller.start();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -11,18 +283,10 @@ class ScannerTab extends StatelessWidget {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Fake camera background
-          Container(
-            color: Colors.black,
-            child: const Center(
-              child: Text(
-                "Camera Feed Active",
-                style: TextStyle(color: Colors.white12, fontSize: 18),
-              ),
-            ),
-          ),
+          // Live camera feed
+          MobileScanner(controller: _controller, onDetect: _onDetect),
 
-          // Overlay with scanner
+          // Overlay with scanner cutout
           Container(
             decoration: ShapeDecoration(
               shape: QrScannerOverlayShape(
@@ -48,7 +312,7 @@ class ScannerTab extends StatelessWidget {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -60,8 +324,22 @@ class ScannerTab extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // Gallery pick button
                   IconButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            "Gallery QR scan — point camera at a QR code instead",
+                            style: GoogleFonts.poppins(fontSize: 13),
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      );
+                    },
                     icon: const Icon(
                       Icons.image_outlined,
                       color: Colors.white70,
@@ -73,6 +351,24 @@ class ScannerTab extends StatelessWidget {
             ),
           ),
 
+          // Scanning animation hint
+          if (!_hasScanned)
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 320),
+                  Text(
+                    "Point camera at a QR code",
+                    style: GoogleFonts.poppins(
+                      color: Colors.white60,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Bottom Actions
           Positioned(
             bottom: 0,
@@ -82,25 +378,43 @@ class ScannerTab extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 40),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.transparent, Colors.black.withOpacity(0.9)],
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.9),
+                  ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
               ),
               child: Column(
                 children: [
-                  // Flashlight
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.15),
-                    ),
-                    child: const Icon(
-                      Icons.flashlight_on,
-                      color: Colors.white,
-                      size: 22,
-                    ),
+                  // Flashlight toggle
+                  ValueListenableBuilder<MobileScannerState>(
+                    valueListenable: _controller,
+                    builder: (context, state, child) {
+                      final torchOn = state.torchState == TorchState.on;
+                      return GestureDetector(
+                        onTap: () => _controller.toggleTorch(),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: torchOn
+                                ? AppColors.primary.withValues(alpha: 0.3)
+                                : Colors.white.withValues(alpha: 0.15),
+                          ),
+                          child: Icon(
+                            torchOn
+                                ? Icons.flashlight_on
+                                : Icons.flashlight_off,
+                            color: torchOn
+                                ? AppColors.primaryLight
+                                : Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 24),
 
@@ -108,10 +422,46 @@ class ScannerTab extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _quickAction(Icons.contacts, "Pay\nContacts"),
-                      _quickAction(Icons.phone_android, "Pay Phone\nNumber"),
-                      _quickAction(Icons.swap_horiz, "Self\nTransfer"),
-                      _quickAction(Icons.account_balance, "Bank\nTransfer"),
+                      _quickAction(
+                        Icons.contacts,
+                        "Pay\nContacts",
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SendMoneyScreen(),
+                          ),
+                        ),
+                      ),
+                      _quickAction(
+                        Icons.phone_android,
+                        "Pay Phone\nNumber",
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SendMoneyScreen(),
+                          ),
+                        ),
+                      ),
+                      _quickAction(
+                        Icons.swap_horiz,
+                        "Self\nTransfer",
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const WalletScreen(),
+                          ),
+                        ),
+                      ),
+                      _quickAction(
+                        Icons.account_balance,
+                        "Bank\nTransfer",
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SendMoneyScreen(),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -123,24 +473,27 @@ class ScannerTab extends StatelessWidget {
     );
   }
 
-  Widget _quickAction(IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(14),
+  Widget _quickAction(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: Colors.white, size: 22),
           ),
-          child: Icon(icon, color: Colors.white, size: 22),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: GoogleFonts.poppins(color: Colors.white70, fontSize: 10),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(color: Colors.white70, fontSize: 10),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -196,7 +549,7 @@ class QrScannerOverlayShape extends ShapeBorder {
     );
 
     final backgroundPaint = Paint()
-      ..color = Colors.black.withOpacity(0.6)
+      ..color = Colors.black.withValues(alpha: 0.6)
       ..style = PaintingStyle.fill;
 
     final boxPaint = Paint()
