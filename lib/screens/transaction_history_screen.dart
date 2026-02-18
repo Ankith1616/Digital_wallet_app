@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/theme_manager.dart';
+import '../utils/transaction_manager.dart';
 import 'home_screen.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
@@ -83,7 +84,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 scrollDirection: Axis.horizontal,
                 itemCount: _filters.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
                   final isSelected = _selectedFilterIndex == index;
                   return GestureDetector(
@@ -116,125 +117,38 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             ),
           ),
 
-          // Date section: Today
+          // Dynamic Transaction List
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-              child: Text(
-                "Today",
-                style: GoogleFonts.poppins(
-                  color: Colors.grey,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: const [
-                  TransactionItem(
-                    icon: Icons.movie_creation,
-                    color: Colors.red,
-                    title: "Netflix Subscription",
-                    date: "12:30 PM",
-                    amount: "-₹499",
+            child: ValueListenableBuilder<List<Transaction>>(
+              valueListenable: TransactionManager().transactionsNotifier,
+              builder: (context, transactions, _) {
+                if (transactions.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(40),
+                    child: Center(
+                      child: Text(
+                        "No transactions yet",
+                        style: GoogleFonts.poppins(color: Colors.grey),
+                      ),
+                    ),
+                  );
+                }
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+                  child: Column(
+                    children: transactions.map((t) {
+                      return TransactionItem(
+                        icon: t.icon,
+                        color: t.color,
+                        title: t.title,
+                        date: t.date,
+                        amount: t.amount,
+                        isPositive: t.isPositive,
+                      );
+                    }).toList(),
                   ),
-                  TransactionItem(
-                    icon: Icons.fastfood,
-                    color: Colors.orange,
-                    title: "Zomato",
-                    date: "10:15 AM",
-                    amount: "-₹320",
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Date section: Yesterday
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Text(
-                "Yesterday",
-                style: GoogleFonts.poppins(
-                  color: Colors.grey,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: const [
-                  TransactionItem(
-                    icon: Icons.music_note,
-                    color: Colors.green,
-                    title: "Spotify Premium",
-                    date: "2:15 PM",
-                    amount: "-₹119",
-                  ),
-                  TransactionItem(
-                    icon: Icons.arrow_downward,
-                    color: Color(0xFF5F259F),
-                    title: "Received from Mike",
-                    date: "11:00 AM",
-                    amount: "+₹5,000",
-                    isPositive: true,
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Date section: Earlier
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Text(
-                "Earlier this week",
-                style: GoogleFonts.poppins(
-                  color: Colors.grey,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: const [
-                  TransactionItem(
-                    icon: Icons.shopping_cart,
-                    color: Colors.orange,
-                    title: "Amazon",
-                    date: "Mon, 10:00 AM",
-                    amount: "-₹1,299",
-                  ),
-                  TransactionItem(
-                    icon: Icons.local_gas_station,
-                    color: Colors.blueGrey,
-                    title: "HP Fuel Station",
-                    date: "Sun, 6:30 PM",
-                    amount: "-₹2,500",
-                  ),
-                  TransactionItem(
-                    icon: Icons.phone_android,
-                    color: Color(0xFF5F259F),
-                    title: "Mobile Recharge",
-                    date: "Sat, 9:00 AM",
-                    amount: "-₹599",
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
