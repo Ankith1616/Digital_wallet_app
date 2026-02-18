@@ -106,14 +106,14 @@ class _NotificationsSettingsScreenState
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.06),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
         ),
       ),
       child: SwitchListTile(
         secondary: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.08),
+            color: AppColors.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: AppColors.primary, size: 20),
@@ -128,7 +128,7 @@ class _NotificationsSettingsScreenState
         ),
         value: value,
         onChanged: onChanged,
-        activeColor: AppColors.primary,
+        activeThumbColor: AppColors.primary,
         contentPadding: EdgeInsets.zero,
       ),
     );
