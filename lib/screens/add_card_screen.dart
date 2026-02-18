@@ -184,7 +184,7 @@ class AddCardScreen extends StatelessWidget {
             color: isDark ? AppColors.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Theme.of(context).dividerColor.withOpacity(0.08),
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
             ),
           ),
           child: TextField(
