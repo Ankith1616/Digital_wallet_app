@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../main.dart';
 import '../utils/theme_manager.dart';
+import '../utils/auth_manager.dart';
+import 'pin_screen.dart';
+import '../widgets/interactive_scale.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -114,7 +117,7 @@ class LoginScreen extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   // Sign In Button
-                  GestureDetector(
+                  InteractiveScale(
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
@@ -174,9 +177,19 @@ class LoginScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _socialButton(Icons.g_mobiledata, "Google"),
+                      _socialButton(
+                        context,
+                        Icons.g_mobiledata,
+                        "Google",
+                        onTap: () {},
+                      ),
                       const SizedBox(width: 20),
-                      _socialButton(Icons.fingerprint, "Biometric"),
+                      _socialButton(
+                        context,
+                        Icons.fingerprint,
+                        "Biometric",
+                        onTap: () => _handleBiometricLogin(context),
+                      ),
                     ],
                   ),
 
@@ -191,7 +204,7 @@ class LoginScreen extends StatelessWidget {
                           fontSize: 13,
                         ),
                       ),
-                      GestureDetector(
+                      InteractiveScale(
                         onTap: () {},
                         child: Text(
                           "Register",
@@ -243,24 +256,83 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  Widget _socialButton(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.white70, size: 22),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
-          ),
-        ],
+  Widget _socialButton(
+    BuildContext context,
+    IconData icon,
+    String label, {
+    required VoidCallback onTap,
+  }) {
+    return InteractiveScale(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white70, size: 22),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> _handleBiometricLogin(BuildContext context) async {
+    final auth = AuthService();
+    // Check if user has enabled biometrics (or default to true for demo if available)
+    bool authenticated = await auth.authenticateBiometrics();
+
+    if (authenticated) {
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainLayout()),
+        );
+      }
+    } else {
+      // Fallback to PIN if biometric fails/unavailable
+      if (context.mounted) {
+        bool hasPin = await auth.hasPin();
+        if (hasPin) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Biometric failed. Please use PIN.")),
+          );
+          // Ideally show PIN dialog or navigate to PinScreen
+          // For now, we can just show a message or redirect to PIN screen
+          // In a real app, you might want a specific flow here.
+          // Let's offer to login with PIN
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PinScreen(
+                mode: PinMode.verify,
+                onSuccess: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MainLayout()),
+                  );
+                },
+              ),
+            ),
+          );
+        } else {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Biometric auth failed and no PIN set."),
+              ),
+            );
+          }
+        }
+      }
+    }
   }
 }

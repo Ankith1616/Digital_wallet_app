@@ -39,6 +39,11 @@ dependencies:
   fl_chart: ^0.65.0           # Creates the AI graphs
   font_awesome_flutter: ^10.6.0 # Adds the cool brand icons (Google, Apple)
   mobile_scanner: ^6.0.2        # QR/Barcode scanning with camera
+  local_auth: ^2.3.0          # Biometric authentication
+  flutter_secure_storage: ^9.2.2 # Secure storage for PIN
+  provider: ^6.1.2            # State management
+  intl: ^0.19.0               # Formatting
+  collection: ^1.19.0         # Collection utilities
   # -------------------------------
 
 dev_dependencies:

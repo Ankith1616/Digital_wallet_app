@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/theme_manager.dart';
 import 'add_card_screen.dart';
+import '../widgets/interactive_scale.dart';
 
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
@@ -77,7 +78,7 @@ class WalletScreen extends StatelessWidget {
                     color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
-                GestureDetector(
+                InteractiveScale(
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const AddCardScreen()),
@@ -85,6 +86,7 @@ class WalletScreen extends StatelessWidget {
                   child: Icon(
                     Icons.add_circle_outline,
                     color: AppColors.primary,
+                    size: 28,
                   ),
                 ),
               ],

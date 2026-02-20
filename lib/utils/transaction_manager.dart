@@ -1,14 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:collection/collection.dart';
+
+enum TransactionCategory {
+  transfer,
+  food,
+  shopping,
+  bills,
+  entertainment,
+  transport,
+  health,
+  other,
+}
 
 class Transaction {
   final String id;
   final String title;
-  final String date;
-  final String amount;
+  final DateTime date;
+  final double amount;
   final bool isPositive;
   final IconData icon;
   final Color color;
-  final String details; // e.g., "Food", "Bill", "Split"
+  final String details;
+  final TransactionCategory category;
 
   Transaction({
     required this.id,
@@ -19,52 +32,74 @@ class Transaction {
     required this.icon,
     required this.color,
     this.details = '',
+    this.category = TransactionCategory.other,
   });
+
+  String get formattedDate {
+    // Simple formatter, can use split_bill implementation for better date formatting if needed
+    // For now keeping it simple as per original string based date
+    // Note: In real app use DateFormat
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inDays == 0) return 'Today';
+    if (diff.inDays == 1) return 'Yesterday';
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String get formattedAmount {
+    return '${isPositive ? "+ " : "- "}₹${amount.abs().toStringAsFixed(0)}';
+  }
 }
 
-class TransactionManager {
+class TransactionManager extends ChangeNotifier {
   static final TransactionManager _instance = TransactionManager._internal();
   factory TransactionManager() => _instance;
   TransactionManager._internal();
 
-  final ValueNotifier<List<Transaction>> transactionsNotifier = ValueNotifier([
+  final List<Transaction> _transactions = [
     Transaction(
       id: '1',
       title: 'Netflix Subscription',
-      date: 'Today, 10:30 AM',
-      amount: '- ₹199',
+      date: DateTime.now(),
+      amount: 199.0,
       isPositive: false,
       icon: Icons.movie_creation,
       color: Colors.red,
       details: 'Subscription',
+      category: TransactionCategory.entertainment,
     ),
     Transaction(
       id: '2',
       title: 'Received from Vamsi',
-      date: 'Yesterday, 8:45 PM',
-      amount: '+ ₹5,000',
+      date: DateTime.now().subtract(const Duration(days: 1)),
+      amount: 5000.0,
       isPositive: true,
       icon: Icons.person,
       color: Colors.green,
       details: 'Transfer',
+      category: TransactionCategory.transfer,
     ),
     Transaction(
       id: '3',
       title: 'Electricity Bill',
-      date: '15 Feb, 1:20 PM',
-      amount: '- ₹1,250',
+      date: DateTime.now().subtract(const Duration(days: 3)),
+      amount: 1250.0,
       isPositive: false,
       icon: Icons.lightbulb,
       color: Colors.orange,
       details: 'Utility',
+      category: TransactionCategory.bills,
     ),
-  ]);
+  ];
+
+  List<Transaction> get transactions => List.unmodifiable(_transactions);
+  ValueNotifier<List<Transaction>> get transactionsNotifier =>
+      ValueNotifier(_transactions);
 
   void addTransaction(Transaction transaction) {
-    // Add to the beginning of the list
-    final currentList = List<Transaction>.from(transactionsNotifier.value);
-    currentList.insert(0, transaction);
-    transactionsNotifier.value = currentList;
+    _transactions.insert(0, transaction);
+    transactionsNotifier.value = List.from(_transactions);
+    notifyListeners();
   }
 
   // Calculate split amount
@@ -73,19 +108,48 @@ class TransactionManager {
     return amount / people;
   }
 
-  // Add a split transaction (e.g., received split share)
-  void addSplitTransaction(String title, double amount) {
+  // Add a split transaction
+  void addSplitTransaction(String title, double amount, int people) {
+    // Adding separate incoming transactions for each person (simulated)
+    // In real app, you would probably track "Pending Requests"
     addTransaction(
       Transaction(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: title,
-        date: 'Just Now',
-        amount: '+ ₹${amount.toStringAsFixed(2)}',
+        date: DateTime.now(),
+        amount: amount,
         isPositive: true,
         icon: Icons.call_split,
         color: Colors.blue,
-        details: 'Split',
+        details: 'Split (1/${people})',
+        category: TransactionCategory.transfer,
       ),
     );
+  }
+
+  // Insights Logic
+  double getTokenSpent(DateTime start, DateTime end) {
+    return _transactions
+        .where(
+          (t) => !t.isPositive && t.date.isAfter(start) && t.date.isBefore(end),
+        )
+        .map((t) => t.amount)
+        .sum;
+  }
+
+  Map<TransactionCategory, double> getCategorySpending(
+    DateTime start,
+    DateTime end,
+  ) {
+    final Map<TransactionCategory, double> spending = {};
+
+    final filtered = _transactions.where(
+      (t) => !t.isPositive && t.date.isAfter(start) && t.date.isBefore(end),
+    );
+
+    for (var t in filtered) {
+      spending[t.category] = (spending[t.category] ?? 0) + t.amount;
+    }
+    return spending;
   }
 }

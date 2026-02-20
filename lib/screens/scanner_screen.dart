@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../utils/theme_manager.dart';
+import '../utils/auth_manager.dart';
+import 'pin_screen.dart';
 import 'send_money_screen.dart';
 import 'wallet_screen.dart';
 
@@ -163,7 +165,23 @@ class _ScannerTabState extends State<ScannerTab> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    // PIN Verification
+                    final auth = AuthService();
+                    final hasPin = await auth.hasPin();
+                    if (ctx.mounted) {
+                      final mode = hasPin ? PinMode.verify : PinMode.create;
+                      final verified = await Navigator.push(
+                        ctx,
+                        MaterialPageRoute(
+                          builder: (_) => PinScreen(mode: mode),
+                        ),
+                      );
+                      if (verified != true) return;
+                    }
+
+                    if (!ctx.mounted) return;
+
                     Navigator.pop(ctx);
                     _showPaymentSuccess();
                   },
