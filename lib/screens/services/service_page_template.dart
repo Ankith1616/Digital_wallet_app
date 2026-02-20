@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../utils/theme_manager.dart';
 import '../../utils/transaction_manager.dart';
+import '../../utils/auth_manager.dart';
+import '../pin_screen.dart';
 
 /// Reusable service page template for bill payment / recharge / booking flows.
 class ServicePageTemplate extends StatefulWidget {
@@ -390,7 +392,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
     );
   }
 
-  void _onSubmit() {
+  Future<void> _onSubmit() async {
     // 1. Find amount
     String amount = '0';
     for (var key in _controllers.keys) {
@@ -402,17 +404,32 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
     }
     if (amount.isEmpty) amount = '0';
 
+    // PIN Verification
+    final auth = AuthService();
+    final hasPin = await auth.hasPin();
+    if (mounted) {
+      final mode = hasPin ? PinMode.verify : PinMode.create;
+      final verified = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => PinScreen(mode: mode)),
+      );
+      if (verified != true) return;
+    }
+
+    if (!mounted) return;
+
     // 2. Add Transaction
     TransactionManager().addTransaction(
       Transaction(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: widget.title,
-        date: 'Just Now',
-        amount: '- ₹$amount',
+        date: DateTime.now(),
+        amount: -(double.tryParse(amount) ?? 0.0),
         isPositive: false,
         icon: widget.icon,
         color: widget.themeColor,
         details: 'Service Payment',
+        category: TransactionCategory.bills,
       ),
     );
 

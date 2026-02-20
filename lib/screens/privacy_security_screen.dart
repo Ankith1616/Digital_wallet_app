@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/theme_manager.dart';
+import 'pin_screen.dart';
 
 class PrivacySecurityScreen extends StatefulWidget {
   const PrivacySecurityScreen({super.key});
@@ -46,10 +47,15 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
             _actionTile(
               context,
               Icons.pin,
-              "Change UPI PIN",
-              "Update your UPI transaction PIN",
+              "Change Transaction PIN",
+              "Update your transaction PIN",
               isDark,
-              () => _showChangeUpiPinDialog(context, isDark),
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PinScreen(mode: PinMode.change),
+                ),
+              ),
             ),
             const SizedBox(height: 20),
 
@@ -185,114 +191,6 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
                   ),
                   child: Text(
                     "Update Password",
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showChangeUpiPinDialog(BuildContext context, bool isDark) {
-    final oldPinCtrl = TextEditingController();
-    final newPinCtrl = TextEditingController();
-    final confirmPinCtrl = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            24,
-            24,
-            24,
-            24 + MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                "Change UPI PIN",
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(ctx).textTheme.bodyLarge?.color,
-                ),
-              ),
-              const SizedBox(height: 20),
-              _dialogField(
-                ctx,
-                "Current UPI PIN",
-                oldPinCtrl,
-                isDark,
-                obscure: true,
-                isNumber: true,
-              ),
-              const SizedBox(height: 12),
-              _dialogField(
-                ctx,
-                "New UPI PIN",
-                newPinCtrl,
-                isDark,
-                obscure: true,
-                isNumber: true,
-              ),
-              const SizedBox(height: 12),
-              _dialogField(
-                ctx,
-                "Confirm New PIN",
-                confirmPinCtrl,
-                isDark,
-                obscure: true,
-                isNumber: true,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("UPI PIN changed successfully!"),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    "Update UPI PIN",
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       color: Colors.white,

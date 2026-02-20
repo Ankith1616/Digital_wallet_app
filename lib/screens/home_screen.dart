@@ -11,6 +11,8 @@ import 'wallet_screen.dart';
 import 'more_services_screen.dart';
 import 'transaction_history_screen.dart';
 import '../utils/transaction_manager.dart';
+import 'split_bill_screen.dart';
+import '../widgets/interactive_scale.dart';
 
 import 'profile_screen.dart';
 import 'services/mobile_recharge_page.dart';
@@ -107,7 +109,7 @@ class _DashboardTabState extends State<DashboardTab> {
                       // Top bar: profile, greeting, notification
                       Row(
                         children: [
-                          GestureDetector(
+                          InteractiveScale(
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -515,8 +517,8 @@ class _DashboardTabState extends State<DashboardTab> {
                             icon: t.icon,
                             color: t.color,
                             title: t.title,
-                            date: t.date,
-                            amount: t.amount,
+                            date: t.formattedDate,
+                            amount: t.formattedAmount,
                             isPositive: t.isPositive,
                           );
                         }).toList(),
@@ -552,31 +554,33 @@ class _DashboardTabState extends State<DashboardTab> {
     Color color,
     VoidCallback onTap,
   ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
+    return Column(
+      children: [
+        InteractiveScale(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(50),
+          child: Container(
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
+              border: Border.all(color: color.withValues(alpha: 0.3)),
             ),
-            child: Icon(icon, color: color, size: 26),
+            child: Icon(icon, color: color, size: 24),
           ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: Theme.of(context).textTheme.bodyMedium?.color,
-            ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Theme.of(context).textTheme.bodyMedium?.color,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -659,7 +663,7 @@ class _DashboardTabState extends State<DashboardTab> {
       itemBuilder: (context, index) {
         final svc = services[index];
         final color = svc['color'] as Color;
-        return GestureDetector(
+        return InteractiveScale(
           onTap: () {
             final label = svc['label'] as String;
             if (label == 'More') {
@@ -704,6 +708,7 @@ class _DashboardTabState extends State<DashboardTab> {
               );
             }
           },
+          borderRadius: BorderRadius.circular(14),
           child: Column(
             children: [
               Container(
@@ -895,15 +900,10 @@ class StatsTab extends StatelessWidget {
                       double totalSpent = 0;
                       double totalReceived = 0;
                       for (var t in transactions) {
-                        String clean = t.amount.replaceAll(
-                          RegExp(r'[^0-9.]'),
-                          '',
-                        );
-                        double val = double.tryParse(clean) ?? 0;
                         if (t.isPositive) {
-                          totalReceived += val;
+                          totalReceived += t.amount;
                         } else {
-                          totalSpent += val;
+                          totalSpent += t.amount;
                         }
                       }
 
@@ -933,9 +933,13 @@ class StatsTab extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          GestureDetector(
-                            onTap: () =>
-                                _showSplitDialog(context, transactions),
+                          InteractiveScale(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const SplitBillScreen(),
+                              ),
+                            ),
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               decoration: BoxDecoration(
@@ -1077,27 +1081,11 @@ class StatsTab extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _categoryRow(
-                    context,
-                    "Entertainment",
-                    "₹618",
-                    0.35,
-                    Colors.red,
-                  ),
-                  _categoryRow(
-                    context,
-                    "Shopping",
-                    "₹1,299",
-                    0.55,
-                    Colors.orange,
-                  ),
-                  _categoryRow(context, "Food", "₹450", 0.25, Colors.green),
-                  _categoryRow(
-                    context,
-                    "Subscriptions",
-                    "₹717",
-                    0.40,
-                    AppColors.primary,
+                  ValueListenableBuilder<List<Transaction>>(
+                    valueListenable: TransactionManager().transactionsNotifier,
+                    builder: (context, transactions, _) {
+                      return _buildCategoryList(context, transactions);
+                    },
                   ),
                   const SizedBox(height: 80),
                 ],
@@ -1109,148 +1097,50 @@ class StatsTab extends StatelessWidget {
     );
   }
 
-  void _showSplitDialog(BuildContext context, List<Transaction> transactions) {
-    // Filter debit transactions
-    final expenses = transactions.where((t) => !t.isPositive).toList();
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              "Select Expense to Split",
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: expenses.isEmpty
-                  ? Center(
-                      child: Text(
-                        "No recent expenses to split",
-                        style: GoogleFonts.poppins(color: Colors.grey),
-                      ),
-                    )
-                  : ListView.separated(
-                      itemCount: expenses.length,
-                      separatorBuilder: (_, __) => const Divider(),
-                      itemBuilder: (ctx, index) {
-                        final t = expenses[index];
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: t.color.withValues(alpha: 0.1),
-                            child: Icon(t.icon, color: t.color, size: 20),
-                          ),
-                          title: Text(t.title, style: GoogleFonts.poppins()),
-                          subtitle: Text(
-                            t.date,
-                            style: GoogleFonts.poppins(fontSize: 12),
-                          ),
-                          trailing: Text(
-                            t.amount,
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.error,
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            _calculateSplit(context, t);
-                          },
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
+  Widget _buildCategoryList(
+    BuildContext context,
+    List<Transaction> transactions,
+  ) {
+    final spending = TransactionManager().getCategorySpending(
+      DateTime.now().subtract(const Duration(days: 30)),
+      DateTime.now(),
     );
-  }
 
-  void _calculateSplit(BuildContext context, Transaction t) {
-    // For simplicity, just split by 3
-    final amountStr = t.amount.replaceAll(RegExp(r'[^0-9.]'), '');
-    final amount = double.tryParse(amountStr) ?? 0;
-    final share = amount / 3;
+    if (spending.isEmpty) {
+      return const Center(child: Text("No expenses yet"));
+    }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          "Split with 2 Friends",
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "Total: ₹${amount.toStringAsFixed(0)}",
-              style: GoogleFonts.poppins(fontSize: 16),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              "Each pays: ₹${share.toStringAsFixed(0)}",
-              style: GoogleFonts.poppins(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "(Assuming 3 people including you)",
-              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text("Cancel", style: GoogleFonts.poppins()),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Split request sent to friends!")),
-              );
-              // Optimistically add split transactions
-              TransactionManager().addSplitTransaction(
-                "Split: ${t.title}",
-                share,
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: Text(
-              "Request Money",
-              style: GoogleFonts.poppins(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+    final total = spending.values.fold(0.0, (sum, val) => sum + val);
+
+    return Column(
+      children: spending.entries.map((entry) {
+        final pct = total == 0 ? 0.0 : entry.value / total;
+        Color color;
+        switch (entry.key) {
+          case TransactionCategory.food:
+            color = Colors.green;
+            break;
+          case TransactionCategory.shopping:
+            color = Colors.orange;
+            break;
+          case TransactionCategory.entertainment:
+            color = Colors.red;
+            break;
+          case TransactionCategory.bills:
+            color = AppColors.primary;
+            break;
+          default:
+            color = Colors.blue;
+        }
+
+        return _categoryRow(
+          context,
+          entry.key.name.toUpperCase(),
+          "₹${entry.value.toStringAsFixed(0)}",
+          pct,
+          color,
+        );
+      }).toList(),
     );
   }
 

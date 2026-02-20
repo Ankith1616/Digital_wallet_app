@@ -8,7 +8,10 @@ import 'privacy_security_screen.dart';
 import 'wallet_screen.dart';
 import 'theme_selection_screen.dart';
 import 'help_support_screen.dart';
+
 import 'about_screen.dart';
+import 'login_screen.dart';
+import '../widgets/interactive_scale.dart';
 
 // Used for direct navigation (Push)
 class ProfileScreen extends StatelessWidget {
@@ -199,31 +202,38 @@ class ProfileTab extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Logout
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: AppColors.error.withValues(alpha: 0.2),
-                ),
-              ),
-              child: ListTile(
-                leading: const Icon(
-                  Icons.logout,
-                  color: AppColors.error,
-                  size: 22,
-                ),
-                title: Text(
-                  "Logout",
-                  style: GoogleFonts.poppins(
-                    color: AppColors.error,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+            InteractiveScale(
+              onTap: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false,
+                );
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppColors.error.withValues(alpha: 0.2),
                   ),
                 ),
-                onTap: () {
-                  if (Navigator.canPop(context)) Navigator.pop(context);
-                },
+                child: ListTile(
+                  leading: const Icon(
+                    Icons.logout,
+                    color: AppColors.error,
+                    size: 22,
+                  ),
+                  title: Text(
+                    "Logout",
+                    style: GoogleFonts.poppins(
+                      color: AppColors.error,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
               ),
             ),
 
@@ -256,88 +266,102 @@ class ProfileTab extends StatelessWidget {
     Widget? dest,
     bool isDark,
   ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
-        ),
-      ),
-      child: ListTile(
-        dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: AppColors.primary, size: 20),
-        ),
-        title: Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w500,
-            fontSize: 14,
-            color: Theme.of(context).textTheme.bodyLarge?.color,
+    return InteractiveScale(
+      onTap: () {
+        if (dest != null) {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => dest));
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text("Feature coming soon!")));
+        }
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
           ),
         ),
-        trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
-        onTap: () {
-          if (dest != null) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => dest));
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Feature coming soon!")),
-            );
-          }
-        },
+        child: ListTile(
+          dense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 20),
+          ),
+          title: Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+            ),
+          ),
+          trailing: const Icon(
+            Icons.chevron_right,
+            size: 20,
+            color: Colors.grey,
+          ),
+        ),
       ),
     );
   }
 
   Widget _languageTile(BuildContext context, bool isDark) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
-        ),
-      ),
-      child: ListTile(
-        dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(Icons.language, color: AppColors.primary, size: 20),
-        ),
-        title: Text(
-          "Language",
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w500,
-            fontSize: 14,
-            color: Theme.of(context).textTheme.bodyLarge?.color,
+    return InteractiveScale(
+      onTap: () => _showLanguageDialog(context, isDark),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
           ),
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "English",
-              style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+        child: ListTile(
+          dense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
             ),
-            const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
-          ],
+            child: const Icon(
+              Icons.language,
+              color: AppColors.primary,
+              size: 20,
+            ),
+          ),
+          title: Text(
+            "Language",
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+            ),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "English",
+                style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+              ),
+              const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+            ],
+          ),
         ),
-        onTap: () => _showLanguageDialog(context, isDark),
       ),
     );
   }

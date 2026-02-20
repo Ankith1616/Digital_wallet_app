@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/theme_manager.dart';
 import '../utils/transaction_manager.dart';
+import '../utils/auth_manager.dart';
+import 'pin_screen.dart';
+import '../widgets/interactive_scale.dart';
 
 class SendMoneyScreen extends StatelessWidget {
   const SendMoneyScreen({super.key});
@@ -64,11 +67,36 @@ class SendMoneyScreen extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _contactBubble(context, "Alex", Colors.blueAccent),
-                  _contactBubble(context, "Sam", Colors.orangeAccent),
-                  _contactBubble(context, "Kate", AppColors.primary),
-                  _contactBubble(context, "Mom", Colors.teal),
-                  _contactBubble(context, "Dad", Colors.redAccent),
+                  _contactBubble(
+                    context,
+                    "Alex",
+                    Colors.blueAccent,
+                    () => _showPaymentSheet(context, "Alex", isDark),
+                  ),
+                  _contactBubble(
+                    context,
+                    "Sam",
+                    Colors.orangeAccent,
+                    () => _showPaymentSheet(context, "Sam", isDark),
+                  ),
+                  _contactBubble(
+                    context,
+                    "Kate",
+                    AppColors.primary,
+                    () => _showPaymentSheet(context, "Kate", isDark),
+                  ),
+                  _contactBubble(
+                    context,
+                    "Mom",
+                    Colors.teal,
+                    () => _showPaymentSheet(context, "Mom", isDark),
+                  ),
+                  _contactBubble(
+                    context,
+                    "Dad",
+                    Colors.redAccent,
+                    () => _showPaymentSheet(context, "Dad", isDark),
+                  ),
                 ],
               ),
             ),
@@ -122,32 +150,40 @@ class SendMoneyScreen extends StatelessWidget {
     );
   }
 
-  Widget _contactBubble(BuildContext context, String name, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 16),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 26,
-            backgroundColor: color.withValues(alpha: 0.15),
-            child: Text(
-              name[0],
-              style: GoogleFonts.poppins(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
+  Widget _contactBubble(
+    BuildContext context,
+    String name,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return InteractiveScale(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 16),
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 26,
+              backgroundColor: color.withValues(alpha: 0.15),
+              child: Text(
+                name[0],
+                style: GoogleFonts.poppins(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            name,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              color: Theme.of(context).textTheme.bodyMedium?.color,
+            const SizedBox(height: 6),
+            Text(
+              name,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -158,38 +194,47 @@ class SendMoneyScreen extends StatelessWidget {
     String phone,
     bool isDark,
   ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
-        ),
-      ),
-      child: ListTile(
-        dense: true,
-        leading: CircleAvatar(
-          radius: 20,
-          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-          child: Text(
-            name[0],
-            style: GoogleFonts.poppins(
-              color: AppColors.primary,
-              fontWeight: FontWeight.bold,
-            ),
+    return InteractiveScale(
+      onTap: () => _showPaymentSheet(context, name, isDark),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
           ),
         ),
-        title: Text(
-          name,
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: 14),
+        child: ListTile(
+          dense: true,
+          leading: CircleAvatar(
+            radius: 20,
+            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+            child: Text(
+              name[0],
+              style: GoogleFonts.poppins(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          title: Text(
+            name,
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+            ),
+          ),
+          subtitle: Text(
+            phone,
+            style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+          ),
+          trailing: Icon(
+            Icons.chevron_right,
+            size: 20,
+            color: Colors.grey[400],
+          ),
         ),
-        subtitle: Text(
-          phone,
-          style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
-        ),
-        trailing: Icon(Icons.chevron_right, size: 20, color: Colors.grey[400]),
-        onTap: () => _showPaymentSheet(context, name, isDark),
       ),
     );
   }
@@ -307,23 +352,41 @@ class SendMoneyScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 height: 50,
-                child: ElevatedButton(
-                  onPressed: () {
+                child: InteractiveScale(
+                  onTap: () async {
                     final amount = amountCtrl.text.isEmpty
                         ? '0'
                         : amountCtrl.text;
+
+                    // PIN Verification
+                    final auth = AuthService();
+                    final hasPin = await auth.hasPin();
+                    if (context.mounted) {
+                      final mode = hasPin ? PinMode.verify : PinMode.create;
+                      final verified = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PinScreen(mode: mode),
+                        ),
+                      );
+                      if (verified != true) return;
+                    }
+
+                    if (!context.mounted) return;
+
                     TransactionManager().addTransaction(
                       Transaction(
                         id: DateTime.now().millisecondsSinceEpoch.toString(),
                         title: "Sent to $name",
-                        date: "Just Now",
-                        amount: "- ₹$amount",
+                        date: DateTime.now(),
+                        amount: double.tryParse(amount) ?? 0.0,
                         isPositive: false,
                         icon: Icons.person,
                         color: AppColors.primary,
                         details: noteCtrl.text.isEmpty
                             ? 'Transfer'
                             : noteCtrl.text,
+                        category: TransactionCategory.transfer,
                       ),
                     );
                     Navigator.pop(ctx);
@@ -334,19 +397,21 @@ class SendMoneyScreen extends StatelessWidget {
                       ),
                     );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(
+                  child: Container(
+                    width: double.infinity,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    "Send Now",
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
+                    child: Text(
+                      "Send Now",
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),

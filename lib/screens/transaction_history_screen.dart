@@ -141,8 +141,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         icon: t.icon,
                         color: t.color,
                         title: t.title,
-                        date: t.date,
-                        amount: t.amount,
+                        date: t.formattedDate,
+                        amount: t.formattedAmount,
                         isPositive: t.isPositive,
                       );
                     }).toList(),
