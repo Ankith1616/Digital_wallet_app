@@ -4,6 +4,7 @@ import '../../utils/theme_manager.dart';
 import '../../utils/transaction_manager.dart';
 import '../../utils/auth_manager.dart';
 import '../pin_screen.dart';
+import '../../widgets/payment_result_dialog.dart';
 
 /// Reusable service page template for bill payment / recharge / booking flows.
 class ServicePageTemplate extends StatefulWidget {
@@ -76,7 +77,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
       appBar: AppBar(
         title: Text(
           widget.title,
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+          style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -127,7 +128,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                         children: [
                           Text(
                             widget.title,
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.spaceGrotesk(
                               color: Colors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -136,7 +137,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                           const SizedBox(height: 4),
                           Text(
                             'Fast, secure & instant',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.spaceGrotesk(
                               color: Colors.white70,
                               fontSize: 12,
                             ),
@@ -153,7 +154,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
               if (widget.providers != null && widget.providers!.isNotEmpty) ...[
                 Text(
                   'SELECT PROVIDER',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.spaceGrotesk(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: Colors.grey,
@@ -201,7 +202,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                               const SizedBox(height: 6),
                               Text(
                                 provider.name,
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.spaceGrotesk(
                                   fontSize: 9,
                                   fontWeight: isSelected
                                       ? FontWeight.w600
@@ -238,7 +239,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                 const SizedBox(height: 8),
                 Text(
                   'QUICK SELECT',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.spaceGrotesk(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: Colors.grey,
@@ -276,7 +277,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                         ),
                         child: Text(
                           '₹$amt',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.spaceGrotesk(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: isSelected ? Colors.white : Colors.grey,
@@ -305,7 +306,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                   ),
                   child: Text(
                     widget.buttonLabel,
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.spaceGrotesk(
                       fontSize: 16,
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
@@ -334,7 +335,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                     Expanded(
                       child: Text(
                         '100% safe & secure payments. Protected with 256-bit encryption.',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.spaceGrotesk(
                           fontSize: 11,
                           color: Colors.grey,
                           height: 1.4,
@@ -363,15 +364,21 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
       child: TextFormField(
         controller: _controllers[field.label],
         keyboardType: field.keyboardType,
-        style: GoogleFonts.poppins(
+        style: GoogleFonts.spaceGrotesk(
           fontSize: 15,
           color: Theme.of(context).textTheme.bodyLarge?.color,
         ),
         decoration: InputDecoration(
           labelText: field.label,
-          labelStyle: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
+          labelStyle: GoogleFonts.spaceGrotesk(
+            color: Colors.grey,
+            fontSize: 13,
+          ),
           hintText: field.hint,
-          hintStyle: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 13),
+          hintStyle: GoogleFonts.spaceGrotesk(
+            color: Colors.grey[400],
+            fontSize: 13,
+          ),
           prefixIcon: Icon(field.icon, color: widget.themeColor, size: 20),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
@@ -434,65 +441,15 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
     );
 
     // 3. Show Success
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check_circle,
-                color: AppColors.success,
-                size: 48,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Request Submitted!',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Your ${widget.title.toLowerCase()} request has been processed successfully.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: widget.themeColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  'Done',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    await PaymentResultDialog.show(
+      context,
+      success: true,
+      title: 'Payment Successful!',
+      subtitle:
+          'Your ${widget.title.toLowerCase()} request has been processed successfully.',
+      amount: amount,
+      recipient: widget.title,
+      onDone: () => Navigator.pop(context),
     );
   }
 }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "676404499217",
+    "project_id": "ai-wallet-ecc12",
+    "storage_bucket": "ai-wallet-ecc12.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676404499217:android:4b120666d30d247521f2b0",
+        "android_client_info": {
+          "package_name": "com.example.wallet_g"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBwv2ftwsiHN2iuUnba7NPhhobyDLlhn7M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

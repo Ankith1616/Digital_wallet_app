@@ -15,7 +15,7 @@ class WalletScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           "My Wallet",
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+          style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -38,7 +38,7 @@ class WalletScreen extends StatelessWidget {
                 children: [
                   Text(
                     "Total Balance",
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.spaceGrotesk(
                       color: Colors.white70,
                       fontSize: 14,
                     ),
@@ -46,7 +46,7 @@ class WalletScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     "₹ 1,24,500.00",
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.spaceGrotesk(
                       color: Colors.white,
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
@@ -72,7 +72,7 @@ class WalletScreen extends StatelessWidget {
               children: [
                 Text(
                   "My Cards",
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.spaceGrotesk(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).textTheme.bodyLarge?.color,
@@ -116,7 +116,7 @@ class WalletScreen extends StatelessWidget {
             // Linked UPI
             Text(
               "Linked UPI IDs",
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.spaceGrotesk(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).textTheme.bodyLarge?.color,
@@ -148,7 +148,7 @@ class WalletScreen extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             "$label: $value",
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.spaceGrotesk(
               color: Colors.white,
               fontSize: 11,
               fontWeight: FontWeight.w500,
@@ -197,21 +197,24 @@ class WalletScreen extends StatelessWidget {
               children: [
                 Text(
                   bank,
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.spaceGrotesk(
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
                 ),
                 Text(
                   "$number  •  $type",
-                  style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+                  style: GoogleFonts.spaceGrotesk(
+                    color: Colors.grey,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
           ),
           Text(
             network,
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.spaceGrotesk(
               color: AppColors.primary,
               fontWeight: FontWeight.w600,
               fontSize: 12,
@@ -259,14 +262,17 @@ class WalletScreen extends StatelessWidget {
               children: [
                 Text(
                   upiId,
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.spaceGrotesk(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
                 ),
                 Text(
                   bank,
-                  style: GoogleFonts.poppins(color: Colors.grey, fontSize: 11),
+                  style: GoogleFonts.spaceGrotesk(
+                    color: Colors.grey,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
@@ -279,7 +285,7 @@ class WalletScreen extends StatelessWidget {
             ),
             child: Text(
               "Active",
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.spaceGrotesk(
                 color: AppColors.success,
                 fontSize: 10,
                 fontWeight: FontWeight.w600,

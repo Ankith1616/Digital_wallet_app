@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firestore_service.dart';
 
 enum TransactionCategory {
   transfer,
@@ -100,6 +102,29 @@ class TransactionManager extends ChangeNotifier {
     _transactions.insert(0, transaction);
     transactionsNotifier.value = List.from(_transactions);
     notifyListeners();
+    // Sync to Firestore if user is logged in
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      FirestoreService().addTransaction(uid, transaction);
+    }
+  }
+
+  /// Load transactions from Firestore and replace local cache
+  Future<void> loadFromFirestore() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      final remote = await FirestoreService().fetchTransactionsOnce(uid);
+      if (remote.isNotEmpty) {
+        _transactions
+          ..clear()
+          ..addAll(remote);
+        transactionsNotifier.value = List.from(_transactions);
+        notifyListeners();
+      }
+    } catch (_) {
+      // Silently fall back to local data if Firestore fails
+    }
   }
 
   // Calculate split amount
@@ -121,7 +146,7 @@ class TransactionManager extends ChangeNotifier {
         isPositive: true,
         icon: Icons.call_split,
         color: Colors.blue,
-        details: 'Split (1/${people})',
+        details: 'Split (1/$people)',
         category: TransactionCategory.transfer,
       ),
     );

@@ -9,7 +9,7 @@ class LoanEmiPage extends StatelessWidget {
     return const ServicePageTemplate(
       title: 'Loan EMI Payment',
       icon: Icons.account_balance,
-      themeColor: Color(0xFF5F259F),
+      themeColor: Color(0xFF00D4FF), // electric cyan
       providers: [
         ServiceProvider(name: 'SBI', icon: Icons.account_balance),
         ServiceProvider(name: 'HDFC', icon: Icons.account_balance),

@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/scanner_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/transaction_history_screen.dart';
 import 'utils/theme_manager.dart';
+import 'utils/fcm_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  FcmService.registerBackgroundHandler();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const DigitalWalletApp());
 }
 
@@ -25,7 +32,18 @@ class DigitalWalletApp extends StatelessWidget {
           theme: AppThemes.lightTheme,
           darkTheme: AppThemes.darkTheme,
           themeMode: mode,
-          home: const LoginScreen(),
+          home: StreamBuilder<User?>(
+            stream: FirebaseAuth.instance.authStateChanges(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snapshot.hasData) return const MainLayout();
+              return const LoginScreen();
+            },
+          ),
         );
       },
     );
@@ -61,23 +79,37 @@ class _MainLayoutState extends State<MainLayout> {
           color: isDark ? AppColors.darkSurface : Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
+              color: isDark
+                  ? AppColors.primary.withValues(alpha: 0.06)
+                  : Colors.black.withValues(alpha: 0.07),
+              blurRadius: 24,
+              offset: const Offset(0, -4),
             ),
           ],
+          border: Border(
+            top: BorderSide(
+              color: isDark
+                  ? AppColors.darkBorder.withValues(alpha: 0.5)
+                  : Colors.black.withValues(alpha: 0.05),
+              width: 0.5,
+            ),
+          ),
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(Icons.home_filled, 'Home', 0),
-                _buildNavItem(Icons.auto_graph, 'Insights', 1),
+                _buildNavItem(Icons.home_rounded, 'Home', 0),
+                _buildNavItem(Icons.auto_graph_rounded, 'Insights', 1),
                 _buildScanButton(),
-                _buildNavItem(Icons.history, 'History', 3),
-                _buildNavItem(Icons.account_balance_wallet, 'My Money', 4),
+                _buildNavItem(Icons.receipt_long_rounded, 'History', 3),
+                _buildNavItem(
+                  Icons.account_balance_wallet_rounded,
+                  'My Money',
+                  4,
+                ),
               ],
             ),
           ),
@@ -88,29 +120,52 @@ class _MainLayoutState extends State<MainLayout> {
 
   Widget _buildNavItem(IconData icon, String label, int index) {
     final isSelected = _currentIndex == index;
+    final isDark = ThemeManager().themeMode.value == ThemeMode.dark;
     return GestureDetector(
       onTap: () => setState(() => _currentIndex = index),
       behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 64,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeInOut,
+        width: isSelected ? 76 : 58,
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.18),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: isSelected ? AppColors.primary : Colors.grey,
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? AppColors.primary : Colors.grey,
+            AnimatedScale(
+              scale: isSelected ? 1.12 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                icon,
+                color: isSelected ? AppColors.primary : const Color(0xFF4A5580),
+                size: 22,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 3),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: isSelected ? 10 : 9,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                color: isSelected ? AppColors.primary : const Color(0xFF4A5580),
+                letterSpacing: isSelected ? 0.2 : 0,
+              ),
+              child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
           ],
         ),
@@ -119,23 +174,32 @@ class _MainLayoutState extends State<MainLayout> {
   }
 
   Widget _buildScanButton() {
+    final isSelected = _currentIndex == 2;
     return GestureDetector(
       onTap: () => setState(() => _currentIndex = 2),
-      child: Container(
-        width: 56,
-        height: 56,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        width: 58,
+        height: 58,
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.4),
-              blurRadius: 12,
+              color: AppColors.primary.withValues(
+                alpha: isSelected ? 0.55 : 0.35,
+              ),
+              blurRadius: isSelected ? 20 : 12,
+              spreadRadius: isSelected ? 2 : 0,
               offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 28),
+        child: const Icon(
+          Icons.qr_code_scanner_rounded,
+          color: Colors.white,
+          size: 26,
+        ),
       ),
     );
   }

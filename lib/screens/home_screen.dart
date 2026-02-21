@@ -1,9 +1,10 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../utils/theme_manager.dart';
 import 'send_money_screen.dart';
 
@@ -39,27 +40,43 @@ class _DashboardTabState extends State<DashboardTab> {
   Timer? _bannerTimer;
   int _currentBannerIndex = 0;
 
+  // Contacts state
+  List<Contact> _contacts = [];
+  bool _hasPermission = false;
+
+  // Avatar colors
+  final List<Color> _avatarColors = const [
+    Color(0xFF6C63FF),
+    Color(0xFFFF6584),
+    Color(0xFF43C59E),
+    Color(0xFFF7B731),
+    Color(0xFF45AAF2),
+    Color(0xFFFC5C65),
+    Color(0xFF26DE81),
+    Color(0xFFFD9644),
+  ];
+
   final List<_BannerData> _banners = const [
     _BannerData(
-      gradient: [Color(0xFF6C63FF), Color(0xFF4834DF)],
+      gradient: [Color(0xFF00D4FF), Color(0xFF0055FF)], // cyan → blue
       icon: Icons.local_offer,
       title: '50% Cashback',
       subtitle: 'On your first UPI transaction!\nUse code: FIRST50',
     ),
     _BannerData(
-      gradient: [Color(0xFF00B894), Color(0xFF00897B)],
+      gradient: [Color(0xFF00E5A0), Color(0xFF00897B)], // teal neon
       icon: Icons.people_alt,
       title: 'Refer & Earn ₹200',
       subtitle: 'Invite friends and earn rewards\nfor every referral!',
     ),
     _BannerData(
-      gradient: [Color(0xFFE17055), Color(0xFFD63031)],
+      gradient: [Color(0xFFFFD166), Color(0xFFFF8C42)], // gold → amber
       icon: Icons.receipt_long,
       title: 'Pay Bills & Win',
       subtitle: 'Pay electricity, water & gas bills\nand win scratch cards!',
     ),
     _BannerData(
-      gradient: [Color(0xFF0984E3), Color(0xFF6C5CE7)],
+      gradient: [Color(0xFF7B2FBE), Color(0xFF00D4FF)], // nebula purple → cyan
       icon: Icons.card_giftcard,
       title: 'Rewards Unlocked!',
       subtitle: 'You have 3 unclaimed rewards\nRedeem now →',
@@ -70,6 +87,30 @@ class _DashboardTabState extends State<DashboardTab> {
   void initState() {
     super.initState();
     _startAutoScroll();
+    _checkContactsPermission();
+  }
+
+  Future<void> _checkContactsPermission() async {
+    final granted = await Permission.contacts.isGranted;
+    if (granted) {
+      try {
+        final contacts = await FlutterContacts.getContacts(
+          withProperties: true,
+          withPhoto: false,
+        );
+        if (mounted) {
+          setState(() {
+            _hasPermission = true;
+            _contacts = contacts
+                .where((c) => c.displayName.isNotEmpty)
+                .take(10)
+                .toList();
+          });
+        }
+      } catch (e) {
+        debugPrint('Error loading contacts on home: $e');
+      }
+    }
   }
 
   @override
@@ -93,6 +134,7 @@ class _DashboardTabState extends State<DashboardTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -346,7 +388,7 @@ class _DashboardTabState extends State<DashboardTab> {
                         context,
                         Icons.account_balance,
                         "To Bank",
-                        const Color(0xFF1565C0),
+                        const Color(0xFF6EE9FF), // cyan light
                         () {
                           Navigator.push(
                             context,
@@ -360,7 +402,7 @@ class _DashboardTabState extends State<DashboardTab> {
                         context,
                         Icons.swap_horiz,
                         "To Self",
-                        const Color(0xFF00897B),
+                        const Color(0xFF00E5A0), // teal neon
                         () {
                           Navigator.push(
                             context,
@@ -374,7 +416,7 @@ class _DashboardTabState extends State<DashboardTab> {
                         context,
                         Icons.account_balance_wallet,
                         "Balance",
-                        const Color(0xFFEF6C00),
+                        const Color(0xFFFFD166), // gold
                         () {
                           Navigator.push(
                             context,
@@ -415,19 +457,7 @@ class _DashboardTabState extends State<DashboardTab> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _contactBubble("Alex", Colors.blueAccent),
-                        _contactBubble("Sam", Colors.orangeAccent),
-                        _contactBubble("Kate", AppColors.primary),
-                        _contactBubble("Mom", Colors.teal),
-                        _contactBubble("Dad", Colors.redAccent),
-                        _contactBubble("Mike", Colors.green),
-                      ],
-                    ),
-                  ),
+                  _buildPeopleList(isDark),
 
                   const SizedBox(height: 24),
 
@@ -449,19 +479,19 @@ class _DashboardTabState extends State<DashboardTab> {
                         _promoCard(
                           "Flat ₹100 Cashback",
                           "On first UPI payment",
-                          const Color(0xFF5F259F),
+                          const Color(0xFF00D4FF), // cyan
                           Icons.card_giftcard,
                         ),
                         _promoCard(
                           "5% Off Recharge",
                           "On mobile prepaid",
-                          const Color(0xFF1565C0),
+                          const Color(0xFF7B2FBE), // nebula purple
                           Icons.phone_android,
                         ),
                         _promoCard(
                           "Win Rewards",
                           "Pay & earn scratch cards",
-                          const Color(0xFF00897B),
+                          const Color(0xFFFFD166), // gold
                           Icons.stars,
                         ),
                       ],
@@ -584,32 +614,74 @@ class _DashboardTabState extends State<DashboardTab> {
     );
   }
 
+  Widget _buildPeopleList(bool isDark) {
+    if (!_hasPermission || _contacts.isEmpty) {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _contactBubble("Alex", Colors.blueAccent),
+            _contactBubble("Sam", Colors.orangeAccent),
+            _contactBubble("Kate", AppColors.primary),
+            _contactBubble("Mom", Colors.teal),
+            _contactBubble("Dad", Colors.redAccent),
+            _contactBubble("Mike", Colors.green),
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: _contacts.map((c) {
+          final color =
+              _avatarColors[c.displayName.codeUnitAt(0) % _avatarColors.length];
+          return _contactBubble(c.displayName, color);
+        }).toList(),
+      ),
+    );
+  }
+
   Widget _contactBubble(String name, Color color) {
     return Padding(
       padding: const EdgeInsets.only(right: 16),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 26,
-            backgroundColor: color.withValues(alpha: 0.15),
-            child: Text(
-              name[0],
-              style: GoogleFonts.poppins(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
+      child: InteractiveScale(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SendMoneyScreen()),
+          );
+        },
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 26,
+              backgroundColor: color.withValues(alpha: 0.15),
+              child: Text(
+                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                style: GoogleFonts.poppins(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            name,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              color: Theme.of(context).textTheme.bodyMedium?.color,
+            const SizedBox(height: 6),
+            SizedBox(
+              width: 60,
+              child: Text(
+                name.split(' ').first,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -619,35 +691,43 @@ class _DashboardTabState extends State<DashboardTab> {
       {
         'icon': Icons.phone_android,
         'label': 'Recharge',
-        'color': const Color(0xFF5F259F),
+        'color': AppColors.primary, // electric cyan
       },
       {
         'icon': Icons.lightbulb,
         'label': 'Electricity',
-        'color': const Color(0xFFF39C12),
+        'color': const Color(0xFFFFD166), // gold
       },
       {
         'icon': Icons.water_drop,
         'label': 'Water',
-        'color': const Color(0xFF2196F3),
+        'color': const Color(0xFF6EE9FF), // light cyan
       },
-      {'icon': Icons.tv, 'label': 'DTH', 'color': const Color(0xFFE91E63)},
+      {
+        'icon': Icons.tv,
+        'label': 'DTH',
+        'color': const Color(0xFFFF4F6D),
+      }, // coral rose
       {
         'icon': Icons.directions_car,
         'label': 'FASTag',
-        'color': const Color(0xFF00897B),
+        'color': const Color(0xFF00E5A0), // teal neon
       },
       {
         'icon': Icons.wifi,
         'label': 'Broadband',
-        'color': const Color(0xFF7B1FA2),
+        'color': const Color(0xFF7B2FBE), // nebula purple
       },
       {
         'icon': Icons.local_gas_station,
         'label': 'Gas',
-        'color': const Color(0xFFFF5722),
+        'color': const Color(0xFFFF8C42), // amber
       },
-      {'icon': Icons.more_horiz, 'label': 'More', 'color': Colors.grey},
+      {
+        'icon': Icons.more_horiz,
+        'label': 'More',
+        'color': const Color(0xFF4A5580),
+      },
     ];
 
     return GridView.builder(
@@ -943,17 +1023,14 @@ class StatsTab extends StatelessWidget {
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.purple.shade400,
-                                    Colors.purple.shade700,
-                                  ],
-                                ),
+                                gradient: AppColors.nebulaGradient,
                                 borderRadius: BorderRadius.circular(14),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.purple.withValues(alpha: 0.3),
-                                    blurRadius: 8,
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.35,
+                                    ),
+                                    blurRadius: 12,
                                     offset: const Offset(0, 4),
                                   ),
                                 ],
