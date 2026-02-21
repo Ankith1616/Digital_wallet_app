@@ -78,19 +78,19 @@ class MoreServicesScreen extends StatelessWidget {
                     {
                       'icon': Icons.tv,
                       'label': 'DTH',
-                      'color': const Color(0xFFE91E63),
+                      'color': const Color(0xFFFF4F6D), // coral rose
                       'page': const DthRechargePage(),
                     },
                     {
                       'icon': Icons.wifi,
                       'label': 'Broadband',
-                      'color': const Color(0xFF7B1FA2),
+                      'color': const Color(0xFF7B2FBE), // nebula purple
                       'page': const BroadbandPage(),
                     },
                     {
                       'icon': Icons.directions_car,
                       'label': 'FASTag',
-                      'color': const Color(0xFF00897B),
+                      'color': const Color(0xFF00E5A0), // teal neon
                       'page': const FastagPage(),
                     },
                   ], isDark),
@@ -99,25 +99,25 @@ class MoreServicesScreen extends StatelessWidget {
                     {
                       'icon': Icons.lightbulb,
                       'label': 'Electricity',
-                      'color': const Color(0xFFF39C12),
+                      'color': const Color(0xFFFFD166), // gold
                       'page': const ElectricityPage(),
                     },
                     {
                       'icon': Icons.water_drop,
                       'label': 'Water',
-                      'color': const Color(0xFF2196F3),
+                      'color': const Color(0xFF6EE9FF), // light cyan
                       'page': const WaterPage(),
                     },
                     {
                       'icon': Icons.local_gas_station,
                       'label': 'Piped Gas',
-                      'color': const Color(0xFFFF5722),
+                      'color': const Color(0xFFFF8C42), // amber
                       'page': const PipedGasPage(),
                     },
                     {
                       'icon': Icons.home,
                       'label': 'Rent',
-                      'color': const Color(0xFF795548),
+                      'color': const Color(0xFF8B6F4E), // warm brown
                       'page': const RentPage(),
                     },
                   ], isDark),
@@ -126,7 +126,7 @@ class MoreServicesScreen extends StatelessWidget {
                     {
                       'icon': Icons.account_balance,
                       'label': 'Loan EMI',
-                      'color': const Color(0xFF5F259F),
+                      'color': AppColors.primary, // electric cyan
                       'page': const LoanEmiPage(),
                     },
                     {
@@ -138,13 +138,13 @@ class MoreServicesScreen extends StatelessWidget {
                     {
                       'icon': Icons.credit_card,
                       'label': 'Credit Card\nBill',
-                      'color': const Color(0xFFC62828),
+                      'color': const Color(0xFFFF4F6D), // coral
                       'page': const CreditCardBillPage(),
                     },
                     {
                       'icon': Icons.savings,
                       'label': 'Mutual\nFunds',
-                      'color': const Color(0xFF4CAF50),
+                      'color': const Color(0xFF00E5A0), // teal neon
                       'page': const MutualFundsPage(),
                     },
                   ], isDark),
@@ -153,25 +153,25 @@ class MoreServicesScreen extends StatelessWidget {
                     {
                       'icon': Icons.flight,
                       'label': 'Flights',
-                      'color': const Color(0xFF1565C0),
+                      'color': const Color(0xFF6EE9FF), // light cyan
                       'page': const FlightsPage(),
                     },
                     {
                       'icon': Icons.train,
                       'label': 'Train',
-                      'color': const Color(0xFFFF6F00),
+                      'color': const Color(0xFFFFD166), // gold
                       'page': const TrainPage(),
                     },
                     {
                       'icon': Icons.directions_bus,
                       'label': 'Bus',
-                      'color': const Color(0xFF2E7D32),
+                      'color': const Color(0xFF00E5A0), // teal neon
                       'page': const BusPage(),
                     },
                     {
                       'icon': Icons.hotel,
                       'label': 'Hotels',
-                      'color': const Color(0xFF6A1B9A),
+                      'color': const Color(0xFF7B2FBE), // nebula purple
                       'page': const HotelsPage(),
                     },
                   ], isDark),

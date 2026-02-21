@@ -17,44 +17,69 @@ class ThemeManager {
   }
 }
 
-// PhonePe-inspired color constants
+// ═══════════════════════════════════════════
+// COSMIC MIDNIGHT Theme — Electric Cyan + Gold
+// ═══════════════════════════════════════════
 class AppColors {
-  // Primary PhonePe purple
-  static const Color primary = Color(0xFF5F259F);
-  static const Color primaryLight = Color(0xFF7B2BFC);
-  static const Color primaryDark = Color(0xFF3D1560);
+  // ─── Primary: Electric Cyan ───
+  static const Color primary = Color(0xFF00D4FF);
+  static const Color primaryLight = Color(0xFF6EE9FF);
+  static const Color primaryDark = Color(0xFF0095B6);
 
-  // Accent / success / warning
-  static const Color accent = Color(0xFF00BFA5);
-  static const Color success = Color(0xFF2ECC71);
-  static const Color warning = Color(0xFFF39C12);
-  static const Color error = Color(0xFFE74C3C);
+  // ─── Gold Accent ───
+  static const Color accent = Color(0xFFFFD166);
+  static const Color gold = Color(0xFFFFD700);
+  static const Color goldDim = Color(0xFFB8960C);
 
-  // Dark theme surfaces
-  static const Color darkBg = Color(0xFF121212);
-  static const Color darkSurface = Color(0xFF1E1E2E);
-  static const Color darkCard = Color(0xFF252536);
+  // ─── Semantic ───
+  static const Color success = Color(0xFF00E5A0);
+  static const Color warning = Color(0xFFFFC107);
+  static const Color error = Color(0xFFFF4F6D);
 
-  // Light theme surfaces
-  static const Color lightBg = Color(0xFFF2F2F7);
-  static const Color lightSurface = Colors.white;
-  static const Color lightCard = Colors.white;
+  // ─── Dark Theme Surfaces ───
+  static const Color darkBg = Color(0xFF070B1A); // deep space
+  static const Color darkSurface = Color(0xFF0D1535); // midnight blue
+  static const Color darkCard = Color(0xFF111D45); // nebula card
+  static const Color darkBorder = Color(0xFF1E2D60);
 
-  // Gradients
+  // ─── Light Theme Surfaces ───
+  static const Color lightBg = Color(0xFFEFF6FF);
+  static const Color lightSurface = Color(0xFFFFFFFF);
+  static const Color lightCard = Color(0xFFF8FBFF);
+
+  // ─── Gradients ───
+  /// Cyan → deep blue (buttons, FAB, logo)
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFF7B2BFC), Color(0xFF5F259F)],
+    colors: [Color(0xFF00D4FF), Color(0xFF0055FF)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
+  /// Deep navy → midnight blue (header / login bg)
   static const LinearGradient headerGradient = LinearGradient(
-    colors: [Color(0xFF5F259F), Color(0xFF3D1560)],
-    begin: Alignment.topCenter,
+    colors: [Color(0xFF080F2E), Color(0xFF0D1A4A), Color(0xFF091340)],
+    begin: Alignment.topLeft,
     end: Alignment.bottomCenter,
+    stops: [0.0, 0.55, 1.0],
+  );
+
+  /// Nebula: cyan → purple (special hero sections)
+  static const LinearGradient nebulaGradient = LinearGradient(
+    colors: [Color(0xFF00D4FF), Color(0xFF7B2FBE)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  /// Gold shimmer (premium card)
+  static const LinearGradient goldGradient = LinearGradient(
+    colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
   );
 }
 
 class AppThemes {
+  // ── DARK THEME ─────────────────────────────
   static final darkTheme = ThemeData.dark().copyWith(
     scaffoldBackgroundColor: AppColors.darkBg,
     primaryColor: AppColors.primary,
@@ -63,20 +88,41 @@ class AppThemes {
       secondary: AppColors.accent,
       surface: AppColors.darkSurface,
       tertiary: AppColors.primaryLight,
+      error: AppColors.error,
     ),
     cardColor: AppColors.darkCard,
-    textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
+    dividerColor: AppColors.darkBorder,
+    textTheme: GoogleFonts.spaceGroteskTextTheme(
+      ThemeData.dark().textTheme,
+    ).apply(bodyColor: Colors.white, displayColor: Colors.white),
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.transparent,
       elevation: 0,
+      iconTheme: IconThemeData(color: Colors.white),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: AppColors.darkSurface,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.darkBorder),
+      ),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: AppColors.darkSurface,
       selectedItemColor: AppColors.primary,
-      unselectedItemColor: Colors.grey,
+      unselectedItemColor: Color(0xFF4A5580),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.darkBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
     ),
   );
 
+  // ── LIGHT THEME ────────────────────────────
   static final lightTheme = ThemeData.light().copyWith(
     scaffoldBackgroundColor: AppColors.lightBg,
     primaryColor: AppColors.primary,
@@ -85,27 +131,36 @@ class AppThemes {
       secondary: AppColors.accent,
       surface: AppColors.lightSurface,
       tertiary: AppColors.primaryLight,
+      error: AppColors.error,
     ),
     cardColor: AppColors.lightCard,
-    textTheme: GoogleFonts.poppinsTextTheme(ThemeData.light().textTheme).apply(
-      bodyColor: const Color(0xFF1A1A2E),
-      displayColor: const Color(0xFF1A1A2E),
-    ),
+    textTheme: GoogleFonts.spaceGroteskTextTheme(ThemeData.light().textTheme)
+        .apply(
+          bodyColor: const Color(0xFF0A0F2C),
+          displayColor: const Color(0xFF0A0F2C),
+        ),
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      iconTheme: IconThemeData(color: Color(0xFF1A1A2E)),
+      iconTheme: IconThemeData(color: Color(0xFF0A0F2C)),
       titleTextStyle: TextStyle(
-        color: Color(0xFF1A1A2E),
+        color: Color(0xFF0A0F2C),
         fontSize: 20,
         fontWeight: FontWeight.bold,
       ),
     ),
-    iconTheme: const IconThemeData(color: Color(0xFF1A1A2E)),
+    iconTheme: const IconThemeData(color: Color(0xFF0A0F2C)),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: Colors.white,
       selectedItemColor: AppColors.primary,
-      unselectedItemColor: Colors.grey,
+      unselectedItemColor: Color(0xFF8898AA),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
     ),
   );
 }

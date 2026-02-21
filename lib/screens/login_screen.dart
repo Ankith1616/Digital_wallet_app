@@ -1,13 +1,138 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../main.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/theme_manager.dart';
 import '../utils/auth_manager.dart';
+import '../utils/firebase_auth_service.dart';
+import '../utils/fcm_service.dart';
 import 'pin_screen.dart';
 import '../widgets/interactive_scale.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  // Sign In controllers
+  final _signInEmailCtrl = TextEditingController();
+  final _signInPasswordCtrl = TextEditingController();
+
+  // Sign Up controllers
+  final _signUpNameCtrl = TextEditingController();
+  final _signUpEmailCtrl = TextEditingController();
+  final _signUpPasswordCtrl = TextEditingController();
+
+  bool _obscureSignIn = true;
+  bool _obscureSignUp = true;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _signInEmailCtrl.dispose();
+    _signInPasswordCtrl.dispose();
+    _signUpNameCtrl.dispose();
+    _signUpEmailCtrl.dispose();
+    _signUpPasswordCtrl.dispose();
+    super.dispose();
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: GoogleFonts.spaceGrotesk()),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: GoogleFonts.spaceGrotesk()),
+        backgroundColor: Colors.green.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Future<void> _handleSignIn() async {
+    final email = _signInEmailCtrl.text.trim();
+    final password = _signInPasswordCtrl.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      _showError('Please fill in all fields.');
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      final credential = await FirebaseAuthService().signInWithEmail(
+        email: email,
+        password: password,
+      );
+      // Init FCM for this user
+      if (credential.user != null) {
+        await FcmService().init(uid: credential.user!.uid);
+      }
+      // StreamBuilder in main.dart will auto-navigate to MainLayout
+    } on FirebaseAuthException catch (e) {
+      _showError(FirebaseAuthService.friendlyError(e));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _handleSignUp() async {
+    final name = _signUpNameCtrl.text.trim();
+    final email = _signUpEmailCtrl.text.trim();
+    final password = _signUpPasswordCtrl.text;
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      _showError('Please fill in all fields.');
+      return;
+    }
+    if (password.length < 6) {
+      _showError('Password must be at least 6 characters.');
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      final credential = await FirebaseAuthService().signUpWithEmail(
+        email: email,
+        password: password,
+        name: name,
+      );
+      // Init FCM for this user
+      if (credential.user != null) {
+        await FcmService().init(uid: credential.user!.uid);
+      }
+      _showSuccess('Account created! Welcome, $name 🎉');
+      // StreamBuilder in main.dart will auto-navigate to MainLayout
+    } on FirebaseAuthException catch (e) {
+      _showError(FirebaseAuthService.friendlyError(e));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +143,6 @@ class LoginScreen extends StatelessWidget {
           Container(
             decoration: BoxDecoration(gradient: AppColors.headerGradient),
           ),
-
           // Decorative circles
           Positioned(
             top: -80,
@@ -44,7 +168,6 @@ class LoginScreen extends StatelessWidget {
               ),
             ),
           ),
-
           // Content
           Center(
             child: SingleChildScrollView(
@@ -68,100 +191,70 @@ class LoginScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    "Digital Wallet",
-                    style: GoogleFonts.poppins(
+                    'Digital Wallet',
+                    style: GoogleFonts.spaceGrotesk(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
                   Text(
-                    "Pay, Transfer & Manage",
-                    style: GoogleFonts.poppins(
+                    'Pay, Transfer & Manage',
+                    style: GoogleFonts.spaceGrotesk(
                       fontSize: 14,
                       color: Colors.white54,
                     ),
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 36),
 
-                  // Phone Number Field
-                  _buildField(
-                    Icons.phone_outlined,
-                    "Mobile Number",
-                    TextInputType.phone,
-                  ),
-                  const SizedBox(height: 16),
-                  // Password Field
-                  _buildField(
-                    Icons.lock_outline,
-                    "Password",
-                    TextInputType.visiblePassword,
-                    obscure: true,
-                  ),
-
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {},
-                      child: Text(
-                        "Forgot Password?",
-                        style: GoogleFonts.poppins(
-                          color: Colors.white70,
-                          fontSize: 13,
-                        ),
-                      ),
+                  // Tab bar
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Sign In Button
-                  InteractiveScale(
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const MainLayout()),
-                      );
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      height: 52,
-                      decoration: BoxDecoration(
+                    child: TabBar(
+                      controller: _tabController,
+                      labelColor: AppColors.primary,
+                      unselectedLabelColor: Colors.white54,
+                      indicator: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Center(
-                        child: Text(
-                          "Sign In",
-                          style: GoogleFonts.poppins(
-                            color: AppColors.primary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      dividerColor: Colors.transparent,
+                      labelStyle: GoogleFonts.spaceGrotesk(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
+                      tabs: const [
+                        Tab(text: 'Sign In'),
+                        Tab(text: 'Sign Up'),
+                      ],
                     ),
                   ),
-
                   const SizedBox(height: 24),
 
-                  // Divider
+                  // Tab views
+                  SizedBox(
+                    height: 320,
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [_buildSignInTab(), _buildSignUpTab()],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // OR divider
                   Row(
                     children: [
                       Expanded(child: Divider(color: Colors.white24)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
-                          "OR",
-                          style: GoogleFonts.poppins(
+                          'OR',
+                          style: GoogleFonts.spaceGrotesk(
                             color: Colors.white38,
                             fontSize: 12,
                           ),
@@ -170,67 +263,109 @@ class LoginScreen extends StatelessWidget {
                       Expanded(child: Divider(color: Colors.white24)),
                     ],
                   ),
+                  const SizedBox(height: 20),
 
-                  const SizedBox(height: 24),
-
-                  // Social logins
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _socialButton(
-                        context,
-                        Icons.g_mobiledata,
-                        "Google",
-                        onTap: () {},
-                      ),
-                      const SizedBox(width: 20),
-                      _socialButton(
-                        context,
-                        Icons.fingerprint,
-                        "Biometric",
-                        onTap: () => _handleBiometricLogin(context),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 32),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Don't have an account? ",
-                        style: GoogleFonts.poppins(
-                          color: Colors.white54,
-                          fontSize: 13,
-                        ),
-                      ),
-                      InteractiveScale(
-                        onTap: () {},
-                        child: Text(
-                          "Register",
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
+                  // Biometric button
+                  _socialButton(
+                    Icons.fingerprint,
+                    'Continue with Biometrics',
+                    onTap: () => _handleBiometricLogin(),
                   ),
                 ],
               ),
             ),
           ),
+
+          // Full-screen loading overlay
+          if (_loading)
+            Container(
+              color: Colors.black45,
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildField(
-    IconData icon,
-    String hint,
-    TextInputType type, {
+  Widget _buildSignInTab() {
+    return Column(
+      children: [
+        _buildField(
+          controller: _signInEmailCtrl,
+          icon: Icons.email_outlined,
+          hint: 'Email Address',
+          type: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 14),
+        _buildField(
+          controller: _signInPasswordCtrl,
+          icon: Icons.lock_outline,
+          hint: 'Password',
+          type: TextInputType.visiblePassword,
+          obscure: _obscureSignIn,
+          onToggleObscure: () =>
+              setState(() => _obscureSignIn = !_obscureSignIn),
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: _handleForgotPassword,
+            child: Text(
+              'Forgot Password?',
+              style: GoogleFonts.spaceGrotesk(
+                color: Colors.white70,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _primaryButton('Sign In', _handleSignIn),
+      ],
+    );
+  }
+
+  Widget _buildSignUpTab() {
+    return Column(
+      children: [
+        _buildField(
+          controller: _signUpNameCtrl,
+          icon: Icons.person_outline_rounded,
+          hint: 'Full Name',
+          type: TextInputType.name,
+        ),
+        const SizedBox(height: 14),
+        _buildField(
+          controller: _signUpEmailCtrl,
+          icon: Icons.email_outlined,
+          hint: 'Email Address',
+          type: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 14),
+        _buildField(
+          controller: _signUpPasswordCtrl,
+          icon: Icons.lock_outline,
+          hint: 'Password (min. 6 chars)',
+          type: TextInputType.visiblePassword,
+          obscure: _obscureSignUp,
+          onToggleObscure: () =>
+              setState(() => _obscureSignUp = !_obscureSignUp),
+        ),
+        const SizedBox(height: 20),
+        _primaryButton('Create Account', _handleSignUp),
+      ],
+    );
+  }
+
+  Widget _buildField({
+    required TextEditingController controller,
+    required IconData icon,
+    required String hint,
+    required TextInputType type,
     bool obscure = false,
+    VoidCallback? onToggleObscure,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -239,13 +374,29 @@ class LoginScreen extends StatelessWidget {
         border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
       ),
       child: TextField(
+        controller: controller,
         keyboardType: type,
         obscureText: obscure,
-        style: GoogleFonts.poppins(color: Colors.white),
+        style: GoogleFonts.spaceGrotesk(color: Colors.white),
         decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: Colors.white38),
+          prefixIcon: Icon(icon, color: Colors.white38, size: 20),
+          suffixIcon: onToggleObscure != null
+              ? IconButton(
+                  onPressed: onToggleObscure,
+                  icon: Icon(
+                    obscure
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    color: Colors.white38,
+                    size: 20,
+                  ),
+                )
+              : null,
           hintText: hint,
-          hintStyle: GoogleFonts.poppins(color: Colors.white30),
+          hintStyle: GoogleFonts.spaceGrotesk(
+            color: Colors.white30,
+            fontSize: 14,
+          ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 20,
@@ -256,8 +407,38 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
+  Widget _primaryButton(String label, VoidCallback onTap) {
+    return InteractiveScale(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        height: 52,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: GoogleFonts.spaceGrotesk(
+              color: AppColors.primary,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _socialButton(
-    BuildContext context,
     IconData icon,
     String label, {
     required VoidCallback onTap,
@@ -265,19 +446,25 @@ class LoginScreen extends StatelessWidget {
     return InteractiveScale(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, color: Colors.white70, size: 22),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Text(
               label,
-              style: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
+              style: GoogleFonts.spaceGrotesk(
+                color: Colors.white70,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -285,53 +472,42 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _handleBiometricLogin(BuildContext context) async {
-    final auth = AuthService();
-    // Check if user has enabled biometrics (or default to true for demo if available)
-    bool authenticated = await auth.authenticateBiometrics();
+  Future<void> _handleForgotPassword() async {
+    final email = _signInEmailCtrl.text.trim();
+    if (email.isEmpty) {
+      _showError('Enter your email above first.');
+      return;
+    }
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      _showSuccess('Password reset email sent to $email');
+    } on FirebaseAuthException catch (e) {
+      _showError(FirebaseAuthService.friendlyError(e));
+    }
+  }
 
+  Future<void> _handleBiometricLogin() async {
+    final auth = AuthService();
+    final nav = Navigator.of(context);
+    bool authenticated = await auth.authenticateBiometrics();
     if (authenticated) {
-      if (context.mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainLayout()),
-        );
-      }
+      // StreamBuilder in main.dart will auto-navigate to MainLayout
     } else {
-      // Fallback to PIN if biometric fails/unavailable
-      if (context.mounted) {
-        bool hasPin = await auth.hasPin();
-        if (hasPin) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Biometric failed. Please use PIN.")),
-          );
-          // Ideally show PIN dialog or navigate to PinScreen
-          // For now, we can just show a message or redirect to PIN screen
-          // In a real app, you might want a specific flow here.
-          // Let's offer to login with PIN
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => PinScreen(
-                mode: PinMode.verify,
-                onSuccess: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const MainLayout()),
-                  );
-                },
-              ),
+      if (!mounted) return;
+      bool hasPin = await auth.hasPin();
+      if (hasPin) {
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => PinScreen(
+              mode: PinMode.verify,
+              onSuccess: () {
+                // StreamBuilder in main.dart will auto-navigate to MainLayout
+              },
             ),
-          );
-        } else {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Biometric auth failed and no PIN set."),
-              ),
-            );
-          }
-        }
+          ),
+        );
+      } else {
+        _showError('Biometric auth failed and no PIN set.');
       }
     }
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/theme_manager.dart';
+import '../utils/firebase_auth_service.dart';
 import 'personal_info_screen.dart';
 import 'bank_accounts_screen.dart';
 import 'notifications_settings_screen.dart';
@@ -8,9 +10,7 @@ import 'privacy_security_screen.dart';
 import 'wallet_screen.dart';
 import 'theme_selection_screen.dart';
 import 'help_support_screen.dart';
-
 import 'about_screen.dart';
-import 'login_screen.dart';
 import '../widgets/interactive_scale.dart';
 
 // Used for direct navigation (Push)
@@ -23,7 +23,7 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           "My Money",
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+          style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -52,7 +52,7 @@ class ProfileTab extends StatelessWidget {
             if (isNested) ...[
               Text(
                 "My Money",
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.spaceGrotesk(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).textTheme.bodyLarge?.color,
@@ -65,58 +65,82 @@ class ProfileTab extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(16),
+                gradient: AppColors.headerGradient,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.25),
+                  width: 1,
+                ),
               ),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.4),
+                          blurRadius: 12,
+                        ),
+                      ],
+                    ),
                     child: const Icon(
-                      Icons.person,
+                      Icons.person_rounded,
                       color: Colors.white,
-                      size: 30,
+                      size: 28,
                     ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Vamsidhar",
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          "UPI: vamsidhar@upi",
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
+                    child: Builder(
+                      builder: (context) {
+                        final user = FirebaseAuth.instance.currentUser;
+                        final name =
+                            user?.displayName ??
+                            user?.email?.split('@').first ??
+                            'User';
+                        final email = user?.email ?? '';
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: GoogleFonts.spaceGrotesk(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              email,
+                              style: GoogleFonts.spaceGrotesk(
+                                fontSize: 12,
+                                color: Colors.white60,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
-                      vertical: 4,
+                      vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      gradient: AppColors.goldGradient,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      "Gold ⭐",
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
+                      "⭐ Gold",
+                      style: GoogleFonts.spaceGrotesk(
+                        color: const Color(0xFF3D2700),
                         fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -131,22 +155,25 @@ class ProfileTab extends StatelessWidget {
             const SizedBox(height: 8),
             _settingsTile(
               context,
-              Icons.credit_card,
+              Icons.credit_card_rounded,
               "My Cards",
+              const Color(0xFF00D4FF), // electric cyan
               const WalletScreen(),
               isDark,
             ),
             _settingsTile(
               context,
-              Icons.account_balance,
+              Icons.account_balance_rounded,
               "Bank Accounts",
+              const Color(0xFFFFD166), // gold
               const BankAccountsScreen(),
               isDark,
             ),
             _settingsTile(
               context,
-              Icons.person_outline,
+              Icons.person_pin_rounded,
               "Personal Info",
+              const Color(0xFF00E5A0), // teal neon
               const PersonalInfoScreen(),
               isDark,
             ),
@@ -158,22 +185,25 @@ class ProfileTab extends StatelessWidget {
             const SizedBox(height: 8),
             _settingsTile(
               context,
-              Icons.notifications_outlined,
+              Icons.notifications_rounded,
               "Notifications",
+              const Color(0xFFFF8C42), // amber
               const NotificationsSettingsScreen(),
               isDark,
             ),
             _settingsTile(
               context,
-              Icons.lock_outline,
+              Icons.shield_rounded,
               "Privacy & Security",
+              const Color(0xFFFF4F6D), // coral
               const PrivacySecurityScreen(),
               isDark,
             ),
             _settingsTile(
               context,
-              Icons.dark_mode_outlined,
+              Icons.palette_rounded,
               "Theme",
+              const Color(0xFF7B2FBE), // nebula purple
               const ThemeSelectionScreen(),
               isDark,
             ),
@@ -186,15 +216,17 @@ class ProfileTab extends StatelessWidget {
             const SizedBox(height: 8),
             _settingsTile(
               context,
-              Icons.help_outline,
+              Icons.headset_mic_rounded,
               "Help & Support",
+              const Color(0xFF6EE9FF), // light cyan
               const HelpSupportScreen(),
               isDark,
             ),
             _settingsTile(
               context,
-              Icons.info_outline,
+              Icons.info_rounded,
               "About",
+              const Color(0xFF8B6F4E), // warm brown
               const AboutScreen(),
               isDark,
             ),
@@ -203,33 +235,46 @@ class ProfileTab extends StatelessWidget {
 
             // Logout
             InteractiveScale(
-              onTap: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  (route) => false,
-                );
+              onTap: () async {
+                await FirebaseAuthService().signOut();
+                if (context.mounted) {
+                  // Ensure any pushed routes are cleared so the LoginScreen is visible
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                }
               },
               borderRadius: BorderRadius.circular(14),
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha: 0.08),
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.error.withValues(alpha: 0.12),
+                      AppColors.error.withValues(alpha: 0.06),
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: AppColors.error.withValues(alpha: 0.2),
+                    color: AppColors.error.withValues(alpha: 0.25),
                   ),
                 ),
                 child: ListTile(
-                  leading: const Icon(
-                    Icons.logout,
-                    color: AppColors.error,
-                    size: 22,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.logout_rounded,
+                      color: AppColors.error,
+                      size: 20,
+                    ),
                   ),
                   title: Text(
                     "Logout",
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.spaceGrotesk(
                       color: AppColors.error,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       fontSize: 14,
                     ),
                   ),
@@ -246,14 +291,14 @@ class ProfileTab extends StatelessWidget {
 
   Widget _sectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsets.only(left: 4, bottom: 2),
       child: Text(
         title.toUpperCase(),
-        style: GoogleFonts.poppins(
+        style: GoogleFonts.spaceGrotesk(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: Colors.grey,
-          letterSpacing: 1.2,
+          color: AppColors.primary.withValues(alpha: 0.7),
+          letterSpacing: 1.5,
         ),
       ),
     );
@@ -263,6 +308,7 @@ class ProfileTab extends StatelessWidget {
     BuildContext context,
     IconData icon,
     String title,
+    Color iconColor,
     Widget? dest,
     bool isDark,
   ) {
@@ -283,7 +329,9 @@ class ProfileTab extends StatelessWidget {
           color: isDark ? AppColors.darkCard : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
+            color: isDark
+                ? AppColors.darkBorder.withValues(alpha: 0.4)
+                : Colors.black.withValues(alpha: 0.04),
           ),
         ),
         child: ListTile(
@@ -292,23 +340,23 @@ class ProfileTab extends StatelessWidget {
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
+              color: iconColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: AppColors.primary, size: 20),
+            child: Icon(icon, color: iconColor, size: 20),
           ),
           title: Text(
             title,
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w500,
+            style: GoogleFonts.spaceGrotesk(
+              fontWeight: FontWeight.w600,
               fontSize: 14,
               color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
-          trailing: const Icon(
-            Icons.chevron_right,
+          trailing: Icon(
+            Icons.chevron_right_rounded,
             size: 20,
-            color: Colors.grey,
+            color: isDark ? const Color(0xFF4A5580) : Colors.grey[400],
           ),
         ),
       ),
@@ -325,7 +373,9 @@ class ProfileTab extends StatelessWidget {
           color: isDark ? AppColors.darkCard : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
+            color: isDark
+                ? AppColors.darkBorder.withValues(alpha: 0.4)
+                : Colors.black.withValues(alpha: 0.04),
           ),
         ),
         child: ListTile(
@@ -334,19 +384,19 @@ class ProfileTab extends StatelessWidget {
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
+              color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
-              Icons.language,
-              color: AppColors.primary,
+              Icons.translate_rounded,
+              color: Color(0xFF7B2FBE),
               size: 20,
             ),
           ),
           title: Text(
             "Language",
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w500,
+            style: GoogleFonts.spaceGrotesk(
+              fontWeight: FontWeight.w600,
               fontSize: 14,
               color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
@@ -356,9 +406,16 @@ class ProfileTab extends StatelessWidget {
             children: [
               Text(
                 "English",
-                style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+                style: GoogleFonts.spaceGrotesk(
+                  color: Colors.grey,
+                  fontSize: 12,
+                ),
               ),
-              const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: isDark ? const Color(0xFF4A5580) : Colors.grey[400],
+              ),
             ],
           ),
         ),

@@ -9,7 +9,7 @@ class MobileRechargePage extends StatelessWidget {
     return const ServicePageTemplate(
       title: 'Mobile Recharge',
       icon: Icons.phone_android,
-      themeColor: Color(0xFF5F259F),
+      themeColor: Color(0xFF00D4FF), // electric cyan
       providers: [
         ServiceProvider(name: 'Jio', icon: Icons.sim_card),
         ServiceProvider(name: 'Airtel', icon: Icons.sim_card),
