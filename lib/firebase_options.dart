@@ -41,48 +41,46 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAia0Uh93oARvOcxGDjHqwn7nkS9HLjdqk',
-    appId: '1:676404499217:web:1a07dfef6eaa0bf421f2b0',
-    messagingSenderId: '676404499217',
-    projectId: 'ai-wallet-ecc12',
-    authDomain: 'ai-wallet-ecc12.firebaseapp.com',
-    storageBucket: 'ai-wallet-ecc12.firebasestorage.app',
-    measurementId: 'G-2QV4GHED71',
+    apiKey: 'AIzaSyCSpz8eS_EPrgnXcftwkNYjfLShBqj-N7M',
+    appId: '1:129528742325:web:83bcbeea8c46893671d9fc',
+    messagingSenderId: '129528742325',
+    projectId: 'digital-wallet-and-tracker',
+    authDomain: 'digital-wallet-and-tracker.firebaseapp.com',
+    storageBucket: 'digital-wallet-and-tracker.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBwv2ftwsiHN2iuUnba7NPhhobyDLlhn7M',
-    appId: '1:676404499217:android:4b120666d30d247521f2b0',
-    messagingSenderId: '676404499217',
-    projectId: 'ai-wallet-ecc12',
-    storageBucket: 'ai-wallet-ecc12.firebasestorage.app',
+    apiKey: 'AIzaSyCSpz8eS_EPrgnXcftwkNYjfLShBqj-N7M',
+    appId: '1:129528742325:android:f8ec052d75717ecd71d9fc',
+    messagingSenderId: '129528742325',
+    projectId: 'digital-wallet-and-tracker',
+    storageBucket: 'digital-wallet-and-tracker.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyC-MNDpRzcveAeM7vBbmAMDmUQyaLm--40',
-    appId: '1:676404499217:ios:5bff4afca93a27d821f2b0',
-    messagingSenderId: '676404499217',
-    projectId: 'ai-wallet-ecc12',
-    storageBucket: 'ai-wallet-ecc12.firebasestorage.app',
-    iosBundleId: 'com.example.walletg',
+    apiKey: 'AIzaSyCSpz8eS_EPrgnXcftwkNYjfLShBqj-N7M',
+    appId: '1:129528742325:ios:some_placeholder_id',
+    messagingSenderId: '129528742325',
+    projectId: 'digital-wallet-and-tracker',
+    storageBucket: 'digital-wallet-and-tracker.firebasestorage.app',
+    iosBundleId: 'com.example.walletG',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyC-MNDpRzcveAeM7vBbmAMDmUQyaLm--40',
-    appId: '1:676404499217:ios:5bff4afca93a27d821f2b0',
-    messagingSenderId: '676404499217',
-    projectId: 'ai-wallet-ecc12',
-    storageBucket: 'ai-wallet-ecc12.firebasestorage.app',
-    iosBundleId: 'com.example.walletg',
+    apiKey: 'AIzaSyCSpz8eS_EPrgnXcftwkNYjfLShBqj-N7M',
+    appId: '1:129528742325:ios:some_placeholder_id',
+    messagingSenderId: '129528742325',
+    projectId: 'digital-wallet-and-tracker',
+    storageBucket: 'digital-wallet-and-tracker.firebasestorage.app',
+    iosBundleId: 'com.example.walletG',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyAia0Uh93oARvOcxGDjHqwn7nkS9HLjdqk',
-    appId: '1:676404499217:web:5a4050cf5764c7c721f2b0',
-    messagingSenderId: '676404499217',
-    projectId: 'ai-wallet-ecc12',
-    authDomain: 'ai-wallet-ecc12.firebaseapp.com',
-    storageBucket: 'ai-wallet-ecc12.firebasestorage.app',
-    measurementId: 'G-S5W2SGF0RT',
+    apiKey: 'AIzaSyCSpz8eS_EPrgnXcftwkNYjfLShBqj-N7M',
+    appId: '1:129528742325:web:83bcbeea8c46893671d9fc',
+    messagingSenderId: '129528742325',
+    projectId: 'digital-wallet-and-tracker',
+    authDomain: 'digital-wallet-and-tracker.firebaseapp.com',
+    storageBucket: 'digital-wallet-and-tracker.firebasestorage.app',
   );
 }

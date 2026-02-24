@@ -1,1 +1,25 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"ai-wallet-ecc12","appId":"1:676404499217:android:4b120666d30d247521f2b0","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"ai-wallet-ecc12","configurations":{"android":"1:676404499217:android:4b120666d30d247521f2b0","ios":"1:676404499217:ios:5bff4afca93a27d821f2b0","macos":"1:676404499217:ios:5bff4afca93a27d821f2b0","web":"1:676404499217:web:1a07dfef6eaa0bf421f2b0","windows":"1:676404499217:web:5a4050cf5764c7c721f2b0"}}}}}}
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "digital-wallet-and-tracker",
+                    "appId": "1:129528742325:android:f8ec052d75717ecd71d9fc",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "digital-wallet-and-tracker",
+                    "configurations": {
+                        "android": "1:129528742325:android:f8ec052d75717ecd71d9fc",
+                        "ios": "1:129528742325:ios:some_placeholder_id",
+                        "macos": "1:129528742325:ios:some_placeholder_id",
+                        "web": "1:129528742325:web:83bcbeea8c46893671d9fc",
+                        "windows": "1:129528742325:web:83bcbeea8c46893671d9fc"
+                    }
+                }
+            }
+        }
+    }
+}

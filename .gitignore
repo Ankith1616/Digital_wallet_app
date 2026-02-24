@@ -43,3 +43,18 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Flutter generated (additional)
+android/build/
+linux/flutter/
+windows/flutter/
+macos/Flutter/GeneratedPluginRegistrant.swift
+
+# Generated plugin registrants
+linux/flutter/generated_plugin_registrant.cc
+linux/flutter/generated_plugins.cmake
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugins.cmake
+
+# Firebase local config (optional but recommended for public repos)
+# android/app/google-services.json
