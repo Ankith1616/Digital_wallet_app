@@ -7,15 +7,26 @@ import 'pin_screen.dart';
 import '../widgets/interactive_scale.dart';
 
 class SplitBillScreen extends StatefulWidget {
-  const SplitBillScreen({super.key});
+  final double? initialAmount;
+  final String? initialNote;
+  const SplitBillScreen({super.key, this.initialAmount, this.initialNote});
 
   @override
   State<SplitBillScreen> createState() => _SplitBillScreenState();
 }
 
 class _SplitBillScreenState extends State<SplitBillScreen> {
-  final TextEditingController _amountController = TextEditingController();
-  final TextEditingController _noteController = TextEditingController();
+  late final TextEditingController _amountController;
+  late final TextEditingController _noteController;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController = TextEditingController(
+      text: widget.initialAmount?.toString() ?? "",
+    );
+    _noteController = TextEditingController(text: widget.initialNote ?? "");
+  }
 
   final List<Map<String, dynamic>> _allContacts = [
     {'name': 'Alex', 'phone': '+91 98765 43210', 'color': Colors.blueAccent},

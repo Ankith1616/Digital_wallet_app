@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -55,6 +56,11 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
 
   // ── Check permission then load ───────────────────────────────────────────
   Future<void> _checkAndLoad() async {
+    // Permission.contacts is not supported on web
+    if (kIsWeb) {
+      setState(() => _state = _ContactsState.needsPermission);
+      return;
+    }
     final status = await Permission.contacts.status;
     if (status.isGranted) {
       _loadContacts();
@@ -64,6 +70,8 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
   }
 
   Future<void> _requestPermission() async {
+    // Cannot request contacts permission on web
+    if (kIsWeb) return;
     setState(() => _state = _ContactsState.loading);
     final status = await Permission.contacts.request();
     if (status.isGranted) {

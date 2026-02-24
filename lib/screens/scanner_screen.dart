@@ -6,6 +6,7 @@ import '../utils/auth_manager.dart';
 import 'pin_screen.dart';
 import 'send_money_screen.dart';
 import 'wallet_screen.dart';
+import '../widgets/payment_result_dialog.dart';
 
 class ScannerTab extends StatefulWidget {
   const ScannerTab({super.key});
@@ -76,7 +77,7 @@ class _ScannerTabState extends State<ScannerTab> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.1),
+                  color: AppColors.success.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -130,9 +131,7 @@ class _ScannerTabState extends State<ScannerTab> {
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.darkCard : Colors.grey[50],
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.2),
-                  ),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
                 ),
                 child: TextField(
                   controller: amountController,
@@ -183,7 +182,7 @@ class _ScannerTabState extends State<ScannerTab> {
                     if (!ctx.mounted) return;
 
                     Navigator.pop(ctx);
-                    _showPaymentSuccess();
+                    _showPaymentSuccess(amountController.text, data);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -227,66 +226,15 @@ class _ScannerTabState extends State<ScannerTab> {
     });
   }
 
-  void _showPaymentSuccess() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check_circle,
-                color: AppColors.success,
-                size: 48,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "Payment Successful!",
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Your transaction has been completed.",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _resetScanner();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  "Done",
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+  void _showPaymentSuccess(String amount, String recipient) {
+    PaymentResultDialog.show(
+      context,
+      success: true,
+      title: 'Payment Successful!',
+      subtitle: 'Your transaction has been completed.',
+      amount: amount,
+      recipient: recipient,
+      onDone: () => _resetScanner(),
     );
   }
 
@@ -330,7 +278,7 @@ class _ScannerTabState extends State<ScannerTab> {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
+                      color: Colors.white.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -396,10 +344,7 @@ class _ScannerTabState extends State<ScannerTab> {
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 40),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.9),
-                  ],
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.9)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -418,8 +363,8 @@ class _ScannerTabState extends State<ScannerTab> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: torchOn
-                                ? AppColors.primary.withValues(alpha: 0.3)
-                                : Colors.white.withValues(alpha: 0.15),
+                                ? AppColors.primary.withOpacity(0.3)
+                                : Colors.white.withOpacity(0.15),
                           ),
                           child: Icon(
                             torchOn
@@ -499,7 +444,7 @@ class _ScannerTabState extends State<ScannerTab> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: Colors.white.withOpacity(0.1),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(icon, color: Colors.white, size: 22),
@@ -567,7 +512,7 @@ class QrScannerOverlayShape extends ShapeBorder {
     );
 
     final backgroundPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.6)
+      ..color = Colors.black.withOpacity(0.6)
       ..style = PaintingStyle.fill;
 
     final boxPaint = Paint()

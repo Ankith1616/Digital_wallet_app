@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firestore_service.dart';
+import 'package:wallet_g/utils/widget_helper.dart';
 
 enum TransactionCategory {
   transfer,
@@ -92,16 +93,31 @@ class TransactionManager extends ChangeNotifier {
       details: 'Utility',
       category: TransactionCategory.bills,
     ),
+    Transaction(
+      id: '4',
+      title: 'Grocery Mart',
+      date: DateTime.now().subtract(const Duration(days: 2)),
+      amount: 850.0,
+      isPositive: false,
+      icon: Icons.shopping_basket,
+      color: Colors.blue,
+      details: 'Food',
+      category: TransactionCategory.food,
+    ),
   ];
 
   List<Transaction> get transactions => List.unmodifiable(_transactions);
-  ValueNotifier<List<Transaction>> get transactionsNotifier =>
+  late final ValueNotifier<List<Transaction>> transactionsNotifier =
       ValueNotifier(_transactions);
 
   void addTransaction(Transaction transaction) {
     _transactions.insert(0, transaction);
     transactionsNotifier.value = List.from(_transactions);
     notifyListeners();
+
+    // Update Home Widget text immediately
+    WidgetHelper.updateWidgetSpending();
+
     // Sync to Firestore if user is logged in
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
@@ -121,6 +137,9 @@ class TransactionManager extends ChangeNotifier {
           ..addAll(remote);
         transactionsNotifier.value = List.from(_transactions);
         notifyListeners();
+
+        // Update widget with newly loaded data
+        WidgetHelper.updateWidgetSpending();
       }
     } catch (_) {
       // Silently fall back to local data if Firestore fails
@@ -153,10 +172,11 @@ class TransactionManager extends ChangeNotifier {
   }
 
   // Insights Logic
-  double getTokenSpent(DateTime start, DateTime end) {
+  double getTotalSpent(DateTime start, DateTime end) {
     return _transactions
         .where(
-          (t) => !t.isPositive && t.date.isAfter(start) && t.date.isBefore(end),
+          (t) =>
+              !t.isPositive && !t.date.isBefore(start) && !t.date.isAfter(end),
         )
         .map((t) => t.amount)
         .sum;
