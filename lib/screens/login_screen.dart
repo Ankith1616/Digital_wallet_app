@@ -6,6 +6,7 @@ import '../utils/auth_manager.dart';
 import '../utils/firebase_auth_service.dart';
 import '../utils/fcm_service.dart';
 import 'pin_screen.dart';
+import 'phone_login_screen.dart';
 import '../widgets/interactive_scale.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -264,6 +265,19 @@ class _LoginScreenState extends State<LoginScreen>
                     ],
                   ),
                   const SizedBox(height: 20),
+
+                  // Phone login button
+                  _socialButton(
+                    Icons.phone_android_rounded,
+                    'Continue with Phone',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PhoneLoginScreen(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
 
                   // Biometric button
                   _socialButton(
