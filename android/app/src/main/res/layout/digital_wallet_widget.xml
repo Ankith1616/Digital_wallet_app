@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:gravity="center_vertical">
+
+    <!-- Header row: app name -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="Digital Wallet"
+        android:textColor="#FFFFFFFF"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <!-- Divider -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#33FFFFFF"
+        android:layout_marginBottom="10dp" />
+
+    <!-- Title (e.g. "Monthly Spending") -->
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Monthly Spending"
+        android:textColor="#AAB0B8B0"
+        android:textSize="11sp" />
+
+    <!-- Amount (big number) -->
+    <TextView
+        android:id="@+id/widget_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="--"
+        android:textColor="#FF6C63FF"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:layout_marginTop="2dp" />
+
+    <!-- Graph Image -->
+    <ImageView
+        android:id="@+id/widget_chart_image"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
+
+    <!-- Tap hint -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Tap to open Insights"
+        android:textColor="#66FFFFFF"
+        android:textSize="10sp"
+        android:layout_marginTop="8dp" />
+
+</LinearLayout>
