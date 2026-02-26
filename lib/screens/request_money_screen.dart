@@ -12,13 +12,7 @@ class RequestMoneyScreen extends StatefulWidget {
 class _RequestMoneyScreenState extends State<RequestMoneyScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
-  final List<String> _contacts = [
-    "Alexander",
-    "Emily",
-    "Michael",
-    "Sophia",
-    "Daniel",
-  ];
+  final List<String> _contacts = [];
   int _selectedContact = -1;
 
   @override
@@ -95,64 +89,74 @@ class _RequestMoneyScreenState extends State<RequestMoneyScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 90,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _contacts.length,
-                itemBuilder: (context, index) {
-                  final isSelected = _selectedContact == index;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedContact = index),
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: Column(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : Colors.transparent,
-                                width: 2.5,
-                              ),
-                            ),
-                            child: CircleAvatar(
-                              radius: 26,
-                              backgroundColor: AppColors.primary.withValues(
-                                alpha: 0.1,
-                              ),
-                              child: Text(
-                                _contacts[index][0],
-                                style: GoogleFonts.poppins(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _contacts[index],
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : Colors.grey,
-                              fontWeight: isSelected
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                            ),
-                          ),
-                        ],
+            _contacts.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Text(
+                      "No recent contacts",
+                      style: GoogleFonts.poppins(
+                        color: Colors.grey,
+                        fontSize: 13,
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
+                  )
+                : SizedBox(
+                    height: 90,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _contacts.length,
+                      itemBuilder: (context, index) {
+                        final isSelected = _selectedContact == index;
+                        return GestureDetector(
+                          onTap: () => setState(() => _selectedContact = index),
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 16),
+                            child: Column(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : Colors.transparent,
+                                      width: 2.5,
+                                    ),
+                                  ),
+                                  child: CircleAvatar(
+                                    radius: 26,
+                                    backgroundColor: AppColors.primary
+                                        .withValues(alpha: 0.1),
+                                    child: Text(
+                                      _contacts[index][0],
+                                      style: GoogleFonts.poppins(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _contacts[index],
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : Colors.grey,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
 
             const SizedBox(height: 16),
 

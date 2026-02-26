@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:image_picker/image_picker.dart';
 import '../utils/theme_manager.dart';
 import '../utils/auth_manager.dart';
 import 'pin_screen.dart';
@@ -38,6 +39,42 @@ class _ScannerTabState extends State<ScannerTab> {
     setState(() => _hasScanned = true);
     _controller.stop();
     _showScanResult(barcode.rawValue!);
+  }
+
+  String _getPayeeName(String data) {
+    try {
+      final uri = Uri.parse(data);
+      if (uri.scheme == 'upi') {
+        // Extract PN (Payee Name)
+        final pn = uri.queryParameters['pn'];
+        if (pn != null && pn.isNotEmpty) {
+          return Uri.decodeComponent(pn);
+        }
+        // Fallback to PA (Payee Address/VPA)
+        final pa = uri.queryParameters['pa'];
+        if (pa != null && pa.isNotEmpty) {
+          return pa;
+        }
+      }
+    } catch (_) {}
+    return data;
+  }
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      final capture = await _controller.analyzeImage(image.path);
+      if (capture == null || capture.barcodes.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No QR code found in image')),
+          );
+        }
+      } else {
+        _onDetect(capture);
+      }
+    }
   }
 
   void _showScanResult(String data) {
@@ -98,7 +135,7 @@ class _ScannerTabState extends State<ScannerTab> {
               ),
               const SizedBox(height: 8),
 
-              // Scanned data
+              // Payee Info (Hidden raw UPI link)
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -107,17 +144,34 @@ class _ScannerTabState extends State<ScannerTab> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.link, color: AppColors.primary, size: 18),
-                    const SizedBox(width: 10),
+                    const Icon(
+                      Icons.person_outline,
+                      color: AppColors.primary,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        data,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          color: Theme.of(ctx).textTheme.bodyMedium?.color,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Paying to",
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                          Text(
+                            _getPayeeName(data),
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(ctx).textTheme.bodyLarge?.color,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -292,24 +346,11 @@ class _ScannerTabState extends State<ScannerTab> {
                   ),
                   // Gallery pick button
                   IconButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            "Gallery QR scan — point camera at a QR code instead",
-                            style: GoogleFonts.poppins(fontSize: 13),
-                          ),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      );
-                    },
+                    onPressed: _pickImage,
                     icon: const Icon(
                       Icons.image_outlined,
-                      color: Colors.white70,
-                      size: 24,
+                      color: Colors.white,
+                      size: 26,
                     ),
                   ),
                 ],

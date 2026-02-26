@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/theme_manager.dart';
 import '../utils/transaction_manager.dart';
+import '../models/transaction.dart';
 import '../utils/auth_manager.dart';
 import 'pin_screen.dart';
 import '../widgets/interactive_scale.dart';
@@ -28,14 +29,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
     _noteController = TextEditingController(text: widget.initialNote ?? "");
   }
 
-  final List<Map<String, dynamic>> _allContacts = [
-    {'name': 'Alex', 'phone': '+91 98765 43210', 'color': Colors.blueAccent},
-    {'name': 'Sam', 'phone': '+91 87654 32109', 'color': Colors.orangeAccent},
-    {'name': 'Kate', 'phone': '+91 76543 21098', 'color': AppColors.primary},
-    {'name': 'Mom', 'phone': '+91 65432 10987', 'color': Colors.teal},
-    {'name': 'Dad', 'phone': '+91 54321 09876', 'color': Colors.redAccent},
-    {'name': 'Mike', 'phone': '+91 12345 67890', 'color': Colors.green},
-  ];
+  final List<Map<String, dynamic>> _allContacts = [];
 
   final Set<int> _selectedContactIndices = {};
 

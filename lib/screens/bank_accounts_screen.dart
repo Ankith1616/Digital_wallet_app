@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/theme_manager.dart';
+import '../utils/firestore_service.dart';
+import '../models/bank_account.dart';
 
 class BankAccountsScreen extends StatelessWidget {
   const BankAccountsScreen({super.key});
@@ -8,6 +11,7 @@ class BankAccountsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       appBar: AppBar(
@@ -19,26 +23,67 @@ class BankAccountsScreen extends StatelessWidget {
         elevation: 0,
         centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _bankTile(
-              context,
-              "State Bank of India",
-              "**** 3942",
-              true,
-              isDark,
+      body: user == null
+          ? const Center(child: Text("Please login to see bank accounts"))
+          : StreamBuilder<List<BankAccount>>(
+              stream: FirestoreService().linkedBanksStream(user.uid),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final banks = snapshot.data ?? [];
+
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      if (banks.isEmpty)
+                        Expanded(
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.account_balance_outlined,
+                                  size: 64,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  "No bank accounts linked",
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: ListView.separated(
+                            itemCount: banks.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final bank = banks[index];
+                              return _bankTile(
+                                context,
+                                bank.bankName,
+                                "**** ${bank.accountNumber.substring(bank.accountNumber.length > 4 ? bank.accountNumber.length - 4 : 0)}",
+                                index == 0, // Mock primary status
+                                isDark,
+                              );
+                            },
+                          ),
+                        ),
+                      _addBankButton(context),
+                    ],
+                  ),
+                );
+              },
             ),
-            const SizedBox(height: 12),
-            _bankTile(context, "HDFC Bank", "**** 7845", false, isDark),
-            const SizedBox(height: 12),
-            _bankTile(context, "ICICI Bank", "**** 1234", false, isDark),
-            const SizedBox(height: 24),
-            _addBankButton(context),
-          ],
-        ),
-      ),
     );
   }
 
@@ -178,8 +223,28 @@ class BankAccountsScreen extends StatelessWidget {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(ctx);
+                      onPressed: () async {
+                        if (bankNameCtrl.text.isEmpty) return;
+
+                        final user = FirebaseAuth.instance.currentUser;
+                        if (user == null) return;
+
+                        final newBank = BankAccount(
+                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                          bankName: bankNameCtrl.text,
+                          accountNumber: accNumCtrl.text,
+                          ifscCode: ifscCtrl.text,
+                          balance: 0.0,
+                          icon: Icons.account_balance,
+                          color: AppColors.primary,
+                        );
+
+                        await FirestoreService().addBankAccount(
+                          user.uid,
+                          newBank,
+                        );
+
+                        if (context.mounted) Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text("Bank account linked successfully!"),
