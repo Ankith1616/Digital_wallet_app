@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui';
-import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/theme_manager.dart';
+import '../models/transaction.dart';
 import '../utils/transaction_manager.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
@@ -176,7 +177,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       ),
                       pw.SizedBox(height: 4),
                       pw.Text(
-                        "Digital Wallet ID: 8870423048",
+                        "Digital Wallet ID: ${FirebaseAuth.instance.currentUser?.phoneNumber ?? FirebaseAuth.instance.currentUser?.uid ?? 'Account'}",
                         style: pw.TextStyle(
                           font: font,
                           fontSize: 12,
@@ -783,9 +784,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                             ),
                           ),
                         ),
-                        ...items
-                            .map((t) => _buildTransactionCard(t, isDark))
-                            ,
+                        ...items.map((t) => _buildTransactionCard(t, isDark)),
                         const SizedBox(height: 12),
                       ],
                     );

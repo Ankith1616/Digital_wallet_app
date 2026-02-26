@@ -105,8 +105,8 @@ class _MainLayoutState extends State<MainLayout> {
           boxShadow: [
             BoxShadow(
               color: isDark
-                  ? AppColors.primary.withOpacity(0.06)
-                  : Colors.black.withOpacity(0.07),
+                  ? AppColors.primary.withValues(alpha: 0.06)
+                  : Colors.black.withValues(alpha: 0.07),
               blurRadius: 24,
               offset: const Offset(0, -4),
             ),

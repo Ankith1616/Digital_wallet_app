@@ -3,19 +3,29 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../models/transaction.dart';
 import '../utils/theme_manager.dart';
 import 'send_money_screen.dart';
+import 'self_transfer_screen.dart';
+import 'setup_screen.dart';
 import 'wallet_screen.dart';
+import 'pin_screen.dart';
 import 'more_services_screen.dart';
 import 'transaction_history_screen.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:intl/intl.dart';
 import '../utils/transaction_manager.dart';
 import '../utils/budget_manager.dart';
+
 import '../utils/widget_helper.dart';
-import 'split_bill_screen.dart';
+
 import '../widgets/interactive_scale.dart';
 import 'profile_screen.dart';
 import 'services/mobile_recharge_page.dart';
@@ -28,6 +38,7 @@ import 'services/piped_gas_page.dart';
 import 'notifications_screen.dart';
 import 'help_support_screen.dart';
 import 'budget_bot_screen.dart';
+import 'offers_rewards_screen.dart';
 
 // ============================================
 // 1. DASHBOARD / HOME SCREEN (PhonePe style)
@@ -166,14 +177,25 @@ class _DashboardTabState extends State<DashboardTab> {
                                 builder: (_) => const ProfileScreen(),
                               ),
                             ),
-                            child: const CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Colors.white24,
-                              child: Icon(
-                                Icons.person,
-                                color: Colors.white,
-                                size: 22,
-                              ),
+                            child: StreamBuilder<User?>(
+                              stream: FirebaseAuth.instance.userChanges(),
+                              builder: (context, snapshot) {
+                                final photoUrl = snapshot.data?.photoURL;
+                                return CircleAvatar(
+                                  radius: 20,
+                                  backgroundColor: Colors.white24,
+                                  backgroundImage: photoUrl != null
+                                      ? NetworkImage(photoUrl)
+                                      : null,
+                                  child: photoUrl == null
+                                      ? const Icon(
+                                          Icons.person,
+                                          color: Colors.white,
+                                          size: 22,
+                                        )
+                                      : null,
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -181,13 +203,23 @@ class _DashboardTabState extends State<DashboardTab> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  "Hello, Vamsidhar 👋",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
+                                StreamBuilder<User?>(
+                                  stream: FirebaseAuth.instance.userChanges(),
+                                  builder: (context, snapshot) {
+                                    final user = snapshot.data;
+                                    final name =
+                                        user?.displayName ??
+                                        user?.email?.split('@').first ??
+                                        'User';
+                                    return Text(
+                                      "Hello, $name 👋",
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    );
+                                  },
                                 ),
                                 Text(
                                   "Welcome back!",
@@ -255,39 +287,7 @@ class _DashboardTabState extends State<DashboardTab> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
-                      // Dynamic Balance Card
-                      ValueListenableBuilder<List<Transaction>>(
-                        valueListenable:
-                            TransactionManager().transactionsNotifier,
-                        builder: (context, transactions, _) {
-                          final totalSpent = TransactionManager().getTotalSpent(
-                            DateTime.now().subtract(const Duration(days: 30)),
-                            DateTime.now(),
-                          );
-                          final balance =
-                              12500.0 - totalSpent; // Mock initial balance
-                          return Column(
-                            children: [
-                              Text(
-                                "Total Balance",
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              Text(
-                                "₹${balance.toStringAsFixed(0)}",
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+                      const SizedBox(height: 8),
                     ],
                   ),
                 ),
@@ -313,74 +313,87 @@ class _DashboardTabState extends State<DashboardTab> {
                         final banner = _banners[index];
                         return Container(
                           margin: const EdgeInsets.symmetric(horizontal: 4),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: banner.gradient,
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: [
-                              BoxShadow(
-                                color: banner.gradient.first.withValues(
-                                  alpha: 0.35,
-                                ),
-                                blurRadius: 12,
-                                offset: const Offset(0, 6),
+                          child: InteractiveScale(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const OffersRewardsScreen(),
                               ),
-                            ],
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: Icon(
-                                    banner.icon,
-                                    color: Colors.white,
-                                    size: 32,
-                                  ),
+                            ),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: banner.gradient,
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        banner.title,
-                                        style: GoogleFonts.poppins(
-                                          color: Colors.white,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: banner.gradient.first.withValues(
+                                      alpha: 0.35,
+                                    ),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(14),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(14),
                                       ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        banner.subtitle,
-                                        style: GoogleFonts.poppins(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.85,
+                                      child: Icon(
+                                        banner.icon,
+                                        color: Colors.white,
+                                        size: 32,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            banner.title,
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.white,
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
-                                          fontSize: 12,
-                                          height: 1.4,
-                                        ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            banner.subtitle,
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.white.withValues(
+                                                alpha: 0.85,
+                                              ),
+                                              fontSize: 12,
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                    Icon(
+                                      Icons.arrow_forward_ios,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.6,
+                                      ),
+                                      size: 18,
+                                    ),
+                                  ],
                                 ),
-                                Icon(
-                                  Icons.arrow_forward_ios,
-                                  color: Colors.white.withValues(alpha: 0.6),
-                                  size: 18,
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         );
@@ -441,20 +454,6 @@ class _DashboardTabState extends State<DashboardTab> {
                       ),
                       _circleAction(
                         context,
-                        Icons.account_balance,
-                        "To Bank",
-                        const Color(0xFF6EE9FF), // cyan light
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const SendMoneyScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      _circleAction(
-                        context,
                         Icons.swap_horiz,
                         "To Self",
                         const Color(0xFF00E5A0), // teal neon
@@ -462,15 +461,39 @@ class _DashboardTabState extends State<DashboardTab> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const WalletScreen(),
+                              builder: (_) => const SelfTransferScreen(),
                             ),
                           );
                         },
                       ),
                       _circleAction(
                         context,
+                        Icons.settings_suggest_outlined,
+                        "Setup",
+                        const Color(0xFF6C63FF), // purple
+                        () async {
+                          final verified = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  const PinScreen(mode: PinMode.verify),
+                            ),
+                          );
+
+                          if (verified == true && context.mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const SetupScreen(),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      _circleAction(
+                        context,
                         Icons.account_balance_wallet,
-                        "Balance",
+                        "Check Balance",
                         const Color(0xFFFFD166), // gold
                         () {
                           Navigator.push(
@@ -671,17 +694,11 @@ class _DashboardTabState extends State<DashboardTab> {
 
   Widget _buildPeopleList(bool isDark) {
     if (!_hasPermission || _contacts.isEmpty) {
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _contactBubble("Alex", Colors.blueAccent),
-            _contactBubble("Sam", Colors.orangeAccent),
-            _contactBubble("Kate", AppColors.primary),
-            _contactBubble("Mom", Colors.teal),
-            _contactBubble("Dad", Colors.redAccent),
-            _contactBubble("Mike", Colors.green),
-          ],
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          _hasPermission ? "No contacts found" : "Permission required",
+          style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
         ),
       );
     }
@@ -874,38 +891,44 @@ class _DashboardTabState extends State<DashboardTab> {
   }
 
   Widget _promoCard(String title, String subtitle, Color color, IconData icon) {
-    return Container(
-      width: 220,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [color, color.withValues(alpha: 0.7)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
+    return InteractiveScale(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const OffersRewardsScreen()),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 32),
-          const Spacer(),
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
+      child: Container(
+        width: 220,
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [color, color.withValues(alpha: 0.7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 32),
+            const Spacer(),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1004,6 +1027,7 @@ class StatsTab extends StatefulWidget {
 class _StatsTabState extends State<StatsTab> {
   final GlobalKey _chartKey = GlobalKey();
   bool _isPinning = false;
+  String _selectedPeriod = 'Monthly';
 
   @override
   void initState() {
@@ -1044,200 +1068,246 @@ class _StatsTabState extends State<StatsTab> {
     }
   }
 
+  List<Transaction> _getFilteredTransactions(
+    List<Transaction> allTransactions,
+  ) {
+    final now = DateTime.now();
+    DateTime start;
+
+    switch (_selectedPeriod) {
+      case 'Weekly':
+        start = now.subtract(const Duration(days: 7));
+        break;
+      case 'Monthly':
+        start = now.subtract(const Duration(days: 30));
+        break;
+      case '6 Months':
+        start = now.subtract(const Duration(days: 180));
+        break;
+      case 'This Year':
+        start = DateTime(now.year, 1, 1);
+        break;
+      default:
+        start = now.subtract(const Duration(days: 30));
+    }
+
+    return allTransactions.where((t) => t.date.isAfter(start)).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppColors.darkBg : const Color(0xFFF5F7FA);
 
     return Scaffold(
+      backgroundColor: bgColor,
       body: ValueListenableBuilder<List<Transaction>>(
         valueListenable: TransactionManager().transactionsNotifier,
-        builder: (context, transactions, _) {
+        builder: (context, allTransactions, _) {
+          final transactions = _getFilteredTransactions(allTransactions);
           double totalSpent = 0;
           double totalReceived = 0;
+          Set<String> uniquePayees = {};
           for (var t in transactions) {
             if (t.isPositive) {
               totalReceived += t.amount;
             } else {
               totalSpent += t.amount;
             }
+            uniquePayees.add(t.title);
           }
-
-          final spending = TransactionManager().getCategorySpending(
-            DateTime.now().subtract(const Duration(days: 30)),
-            DateTime.now(),
-          );
-
-          final budget = BudgetManager().budgetData;
-          final savingsGoal = budget?.savingsGoal ?? 0;
-          final disposable =
-              (budget?.salary ?? 0) -
-              (budget?.rent ?? 0) -
-              (budget?.bills ?? 0) -
-              savingsGoal;
-          final savedSoFar = totalReceived - totalSpent;
-
-          final tip = _getDynamicTip(totalSpent, disposable, spending);
 
           return CustomScrollView(
             slivers: [
-              // === HEADER ===
-              SliverToBoxAdapter(
-                child: Container(
-                  decoration: BoxDecoration(gradient: AppColors.headerGradient),
-                  child: SafeArea(
-                    bottom: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "AI Insights",
-                            style: GoogleFonts.poppins(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "Your spending summary for this month",
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Colors.white70,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _summaryChip(
-                                  "Spent",
-                                  "₹${totalSpent.toInt()}",
-                                  Colors.red,
-                                  Icons.trending_down,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _summaryChip(
-                                  "Received",
-                                  "₹${totalReceived.toInt()}",
-                                  Colors.green,
-                                  Icons.trending_up,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _summaryChip(
-                                  "Txns",
-                                  "${transactions.length}",
-                                  Colors.white70,
-                                  Icons.swap_horiz,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
+              // === DASHBOARD HEADER ===
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // === AI TIP ===
-                      _buildAITipCard(tip, isDark),
-                      const SizedBox(height: 20),
-
-                      // === WEEKLY BAR CHART ===
-                      _sectionHeader("Weekly Spending", "Last 7 days"),
-                      const SizedBox(height: 12),
-                      _buildWeeklyBarChart(transactions, isDark),
-                      const SizedBox(height: 24),
-
-                      // === DONUT + LEGEND ===
-                      _sectionHeader("Spending by Category", null),
-                      const SizedBox(height: 12),
-                      _buildDonutWithLegend(spending, isDark),
-                      const SizedBox(height: 24),
-
-                      // === CATEGORY PROGRESS BARS ===
-                      _sectionHeader("Budget Limits", "This month"),
-                      const SizedBox(height: 12),
-                      _buildCategoryListWithLimits(context, transactions),
-                      const SizedBox(height: 24),
-
-                      // === SAVINGS GOAL ===
-                      if (savingsGoal > 0) ...[
-                        _sectionHeader("Savings Goal", null),
-                        const SizedBox(height: 12),
-                        _buildSavingsGoalCard(savingsGoal, savedSoFar, isDark),
-                        const SizedBox(height: 24),
-                      ],
-
-                      // === BUDGET BOT BANNER ===
-                      _buildBudgetBotBanner(context),
-                      const SizedBox(height: 16),
-
-                      // === HOME WIDGET ===
-                      _buildWidgetPinCard(context, isDark),
-                      const SizedBox(height: 16),
-
-                      // === SPLIT EXPENSE ===
-                      InteractiveScale(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SplitBillScreen(),
+                      Text(
+                        "Insights",
+                        style: GoogleFonts.poppins(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF1B3B52),
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _showDownloadOptions,
+                        icon: const Icon(Icons.description_outlined, size: 16),
+                        label: Text(
+                          "FULL REPORT",
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          decoration: BoxDecoration(
-                            gradient: AppColors.nebulaGradient,
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withValues(
-                                  alpha: 0.35,
-                                ),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00E5A0),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.call_split,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                "Split an Expense with Friends",
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 80),
                     ],
                   ),
                 ),
               ),
+
+              // === AI TIP SECTION ===
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                  child: _buildAITipSection(isDark),
+                ),
+              ),
+
+              // === SAVINGS GOAL ===
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                  child: _buildSavingsGoalCard(5000, 3200, isDark),
+                ),
+              ),
+
+              // === MAIN LINE CHART ===
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                  child: _buildMainLineChart(transactions, isDark),
+                ),
+              ),
+
+              // === INFO GRID & BALANCE OVERVIEW ===
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Left side: 4 info cards
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    _buildGridInfoCard(
+                                      "This Month Income",
+                                      "₹${totalReceived.toInt()}",
+                                      "+ 38%",
+                                      const Color(0xFF00E5A0).withOpacity(0.2),
+                                      isDark,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    _buildGridInfoCard(
+                                      "Avg. Monthly Income",
+                                      "₹11,466",
+                                      null,
+                                      isDark
+                                          ? AppColors.darkCard
+                                          : Colors.white,
+                                      isDark,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    _buildGridInfoCard(
+                                      "This Month Expense",
+                                      "₹${totalSpent.toInt()}",
+                                      null,
+                                      isDark
+                                          ? AppColors.darkCard
+                                          : Colors.white,
+                                      isDark,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    _buildGridInfoCard(
+                                      "Avg. Monthly Expense",
+                                      "₹6,545",
+                                      null,
+                                      isDark
+                                          ? AppColors.darkCard
+                                          : Colors.white,
+                                      isDark,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      // Bottom: Balance Overview & Full Report
+                      _buildBottomBalanceSection(
+                        totalReceived - totalSpent,
+                        totalReceived,
+                        totalSpent,
+                        isDark,
+                      ),
+                      const SizedBox(height: 30),
+                      // Category Budget Limits
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.assignment_outlined,
+                            color: isDark
+                                ? Colors.white70
+                                : const Color(0xFF1B3B52),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            "Category Budget Limits",
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF1B3B52),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _buildCategoryListWithLimits(context, transactions),
+                    ],
+                  ),
+                ),
+              ),
+              // === BUDGET BOT BANNER ===
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+                  child: _buildBudgetBotBanner(context),
+                ),
+              ),
+
+              // === WIDGET PINNING ===
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  child: _buildWidgetPinCard(context, isDark),
+                ),
+              ),
+
+              SliverToBoxAdapter(child: const SizedBox(height: 80)),
             ],
           );
         },
@@ -1245,130 +1315,932 @@ class _StatsTabState extends State<StatsTab> {
     );
   }
 
-  Widget _summaryChip(String label, String value, Color color, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
+  Future<void> _generatePdf(DateTime start, DateTime end) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1E1E2C)
+                : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const CircularProgressIndicator(color: Color(0xFF00E5A0)),
+        ),
       ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
+    );
+
+    try {
+      final allTransactions = TransactionManager().transactions;
+      final filtered = allTransactions.where((t) {
+        return t.date.isAfter(start.subtract(const Duration(seconds: 1))) &&
+            t.date.isBefore(end.add(const Duration(days: 1)));
+      }).toList();
+
+      if (filtered.isEmpty) {
+        if (mounted) Navigator.pop(context);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("No transactions found for the selected period"),
+            ),
+          );
+        }
+        return;
+      }
+
+      final pdf = pw.Document();
+      pw.Font? font;
+      pw.Font? fontBold;
+
+      try {
+        font = await PdfGoogleFonts.spaceGroteskRegular();
+        fontBold = await PdfGoogleFonts.spaceGroteskBold();
+      } catch (e) {
+        font = pw.Font.helvetica();
+        fontBold = pw.Font.helveticaBold();
+      }
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          header: (context) => pw.Container(
+            alignment: pw.Alignment.centerRight,
+            margin: const pw.EdgeInsets.only(bottom: 20),
+            child: pw.Text(
+              'Page ${context.pageNumber} of ${context.pagesCount}',
+              style: pw.TextStyle(
+                color: PdfColors.grey700,
+                font: font,
+                fontSize: 10,
+              ),
             ),
           ),
-          Text(
-            label,
-            style: GoogleFonts.poppins(color: Colors.white70, fontSize: 10),
+          build: (context) => [
+            pw.Header(
+              level: 0,
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        "Transaction Statement",
+                        style: pw.TextStyle(
+                          font: fontBold,
+                          fontSize: 26,
+                          color: PdfColors.indigo900,
+                        ),
+                      ),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        "Digital Wallet Analysis",
+                        style: pw.TextStyle(
+                          font: font,
+                          fontSize: 12,
+                          color: PdfColors.grey700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.Container(
+                    width: 60,
+                    height: 60,
+                    decoration: const pw.BoxDecoration(
+                      color: PdfColors.teal,
+                      shape: pw.BoxShape.circle,
+                    ),
+                    alignment: pw.Alignment.center,
+                    child: pw.Text(
+                      "W",
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        color: PdfColors.white,
+                        fontSize: 30,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 30),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              decoration: const pw.BoxDecoration(
+                color: PdfColors.teal50,
+                borderRadius: pw.BorderRadius.all(pw.Radius.circular(8)),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    "Report Period:",
+                    style: pw.TextStyle(font: fontBold, fontSize: 12),
+                  ),
+                  pw.Text(
+                    "${DateFormat('dd MMM yyyy').format(start)} - ${DateFormat('dd MMM yyyy').format(end)}",
+                    style: pw.TextStyle(font: font, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 30),
+            pw.TableHelper.fromTextArray(
+              headers: ['DATE', 'TITLE', 'CATEGORY', 'AMOUNT'],
+              data: filtered.map((t) {
+                return [
+                  DateFormat('dd/MM/yy').format(t.date),
+                  t.title,
+                  t.category.name.toUpperCase(),
+                  t.formattedAmount,
+                ];
+              }).toList(),
+              headerStyle: pw.TextStyle(
+                font: fontBold,
+                color: PdfColors.white,
+                fontSize: 10,
+              ),
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
+              cellStyle: pw.TextStyle(font: font, fontSize: 10),
+              cellAlignment: pw.Alignment.centerLeft,
+              columnWidths: {
+                0: const pw.FixedColumnWidth(80),
+                1: const pw.FlexColumnWidth(),
+                2: const pw.FixedColumnWidth(80),
+                3: const pw.FixedColumnWidth(100),
+              },
+              border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+              headerHeight: 30,
+              cellPadding: const pw.EdgeInsets.all(8),
+            ),
+            pw.SizedBox(height: 40),
+            pw.Divider(color: PdfColors.grey300),
+            pw.SizedBox(height: 10),
+            pw.Center(
+              child: pw.Text(
+                "Thank you for using our Digital Wallet service!",
+                style: pw.TextStyle(
+                  font: font,
+                  fontSize: 10,
+                  color: PdfColors.grey600,
+                  fontStyle: pw.FontStyle.italic,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (mounted) Navigator.pop(context);
+
+      await Printing.sharePdf(
+        bytes: await pdf.save(),
+        filename: 'Wallet_Statement_${DateFormat('ddMMyy').format(start)}.pdf',
+      );
+    } catch (e) {
+      debugPrint("PDF Generation Error: $e");
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Could not generate report: $e"),
+            backgroundColor: Colors.redAccent,
           ),
-        ],
+        );
+      }
+    }
+  }
+
+  void _showDownloadOptions() {
+    DateTime start = DateTime.now().subtract(const Duration(days: 30));
+    DateTime end = DateTime.now();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                "Generate Statement",
+                style: GoogleFonts.poppins(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Select the duration for your transaction report",
+                style: GoogleFonts.poppins(color: Colors.grey),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "FROM",
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: start,
+                              firstDate: DateTime(2020),
+                              lastDate: end,
+                            );
+                            if (date != null) setModalState(() => start = date);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.white.withOpacity(0.05)
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today_rounded,
+                                  size: 16,
+                                  color: Color(0xFF00E5A0),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  DateFormat('dd MMM yyyy').format(start),
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "TO",
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: end,
+                              firstDate: start,
+                              lastDate: DateTime.now(),
+                            );
+                            if (date != null) setModalState(() => end = date);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.white.withOpacity(0.05)
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today_rounded,
+                                  size: 16,
+                                  color: Color(0xFF00E5A0),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  DateFormat('dd MMM yyyy').format(end),
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _generatePdf(start, end);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00E5A0),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: Text(
+                    "Download Statement",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _sectionHeader(String title, String? subtitle) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        if (subtitle != null)
-          Text(
-            subtitle,
-            style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey),
+  Widget _buildPeriodDropdown(bool isDark) {
+    final periods = ['Weekly', 'Monthly', '6 Months', 'This Year'];
+
+    return PopupMenuButton<String>(
+      onSelected: (value) {
+        setState(() => _selectedPeriod = value);
+      },
+      itemBuilder: (context) => periods.map((period) {
+        return PopupMenuItem(
+          value: period,
+          child: Text(
+            period,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: isDark ? Colors.white : const Color(0xFF1B3B52),
+            ),
           ),
+        );
+      }).toList(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF2A2A3D) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _selectedPeriod,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white70 : const Color(0xFF1B3B52),
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.keyboard_arrow_down, size: 14, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<String> _getChartLabels() {
+    switch (_selectedPeriod) {
+      case 'Weekly':
+        return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      case 'Monthly':
+        return ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+      case '6 Months':
+        final now = DateTime.now();
+        final months = [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
+        ];
+        List<String> lastSix = [];
+        for (int i = 5; i >= 0; i--) {
+          int monthIdx = (now.month - i - 1) % 12;
+          if (monthIdx < 0) monthIdx += 12;
+          lastSix.add(months[monthIdx]);
+        }
+        return lastSix;
+      case 'This Year':
+        return [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
+        ];
+      default:
+        return [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
+        ];
+    }
+  }
+
+  List<FlSpot> _getChartSpots(List<Transaction> transactions, bool isIncome) {
+    final labelsCount = _getChartLabels().length;
+    final now = DateTime.now();
+    List<double> values = List.filled(labelsCount, 0.0);
+
+    for (var tx in transactions) {
+      if (tx.isPositive != isIncome) continue;
+
+      int index = -1;
+
+      switch (_selectedPeriod) {
+        case 'Weekly':
+          // weekday is 1 (Mon) to 7 (Sun). Index 0 is Mon.
+          index = tx.date.weekday - 1;
+          break;
+        case 'Monthly':
+          // ['Week 1', 'Week 2', 'Week 3', 'Week 4']
+          if (tx.date.day <= 7) {
+            index = 0;
+          } else if (tx.date.day <= 14) {
+            index = 1;
+          } else if (tx.date.day <= 21) {
+            index = 2;
+          } else {
+            index = 3;
+          }
+          break;
+        case '6 Months':
+          // Index 0 is 5 months ago, index 5 is current month
+          final monthDiff =
+              (now.year - tx.date.year) * 12 + (now.month - tx.date.month);
+          if (monthDiff >= 0 && monthDiff < 6) {
+            index = 5 - monthDiff;
+          }
+          break;
+        case 'This Year':
+          // Jan is 0
+          if (tx.date.year == now.year) {
+            index = tx.date.month - 1;
+          }
+          break;
+      }
+
+      if (index >= 0 && index < labelsCount) {
+        // Values in graph are usually shown in "K" (thousands) for readability if high,
+        // but here we just use the raw amount or scale it if necessary.
+        // The original dummy data used values around 5-22.
+        // Let's use amount / 1000 to fit that scale, or just raw amount if it's small.
+        values[index] += tx.amount / 1000;
+      }
+    }
+
+    List<FlSpot> spots = [];
+    for (int i = 0; i < labelsCount; i++) {
+      spots.add(FlSpot(i.toDouble(), values[i]));
+    }
+    return spots;
+  }
+
+  Widget _buildMainLineChart(List<Transaction> transactions, bool isDark) {
+    final labels = _getChartLabels();
+    return RepaintBoundary(
+      key: _chartKey,
+      child: Container(
+        height: 250,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _chartLegendItem("Income", const Color(0xFF00E5A0)),
+                const SizedBox(width: 20),
+                _chartLegendItem("Expense", const Color(0xFF6EE9FF)),
+                const Spacer(),
+                _buildPeriodDropdown(isDark),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: Colors.grey.withOpacity(0.1),
+                      strokeWidth: 1,
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 30,
+                        getTitlesWidget: (value, meta) => Text(
+                          "${value.toInt()}K",
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 32,
+                        interval: 1,
+                        getTitlesWidget: (value, meta) {
+                          if (value.toInt() >= 0 &&
+                              value.toInt() < labels.length) {
+                            return SideTitleWidget(
+                              axisSide: meta.axisSide,
+                              space: 10,
+                              child: Text(
+                                labels[value.toInt()],
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
+                  ),
+                  minX: 0,
+                  maxX: (labels.length - 1).toDouble(),
+                  borderData: FlBorderData(show: false),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: _getChartSpots(transactions, true),
+                      isCurved: true,
+                      color: const Color(0xFF00E5A0),
+                      barWidth: 3,
+                      dotData: const FlDotData(show: true),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: const Color(0xFF00E5A0).withOpacity(0.1),
+                      ),
+                    ),
+                    LineChartBarData(
+                      spots: _getChartSpots(transactions, false),
+                      isCurved: true,
+                      color: const Color(0xFF6EE9FF),
+                      barWidth: 3,
+                      dotData: const FlDotData(show: true),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: const Color(0xFF6EE9FF).withOpacity(0.1),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _chartLegendItem(String label, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 4,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: Colors.grey,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ],
     );
   }
 
-  String _getDynamicTip(
-    double spent,
-    double disposable,
-    Map<TransactionCategory, double> spending,
+  Widget _buildGridInfoCard(
+    String label,
+    String value,
+    String? trend,
+    Color bgColor,
+    bool isDark,
   ) {
-    if (disposable > 0 && spent > disposable * 0.9) {
-      return "⚠️ You're close to your monthly limit! Try to reduce discretionary spending.";
-    }
-    final topCat = spending.entries.isNotEmpty
-        ? spending.entries.reduce((a, b) => a.value > b.value ? a : b)
-        : null;
-    if (topCat != null) {
-      return "💡 Your biggest spend is ${topCat.key.name} (₹${topCat.value.toInt()}). Try setting a stricter limit there.";
-    }
-    return "✅ Great job tracking your expenses! Review your categories below.";
-  }
-
-  Widget _buildAITipCard(String tip, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6C63FF), Color(0xFF4B45CC)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: isDark ? Colors.white70 : const Color(0xFF1B3B52),
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            child: const Icon(
-              Icons.lightbulb_outline,
-              color: Colors.white,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 8),
+            Row(
               children: [
-                Text(
-                  "AI Saving Tip",
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1B3B52),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  tip,
-                  style: GoogleFonts.poppins(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 12,
+                if (trend != null) ...[
+                  const SizedBox(width: 6),
+                  const Icon(
+                    Icons.arrow_upward,
+                    size: 12,
+                    color: Color(0xFF00E5A0),
                   ),
-                ),
+                  Flexible(
+                    child: Text(
+                      trend,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: const Color(0xFF00E5A0),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                color: Colors.grey.withOpacity(0.7),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomBalanceSection(
+    double balance,
+    double income,
+    double expense,
+    bool isDark,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : const Color(0xFF1B3B52),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Balance Overview",
+                      style: GoogleFonts.poppins(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "₹${balance.toInt()}",
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _balanceRow(
+                      "Income",
+                      "₹${income.toInt()}",
+                      const Color(0xFF00E5A0),
+                    ),
+                    const SizedBox(height: 8),
+                    _balanceRow(
+                      "Expense",
+                      "₹${expense.toInt()}",
+                      const Color(0xFF6EE9FF),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 100,
+                height: 100,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white10, width: 8),
+                ),
+                child: Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 80,
+                        height: 80,
+                        child: CircularProgressIndicator(
+                          value: 0.67,
+                          strokeWidth: 8,
+                          backgroundColor: Colors.white10,
+                          valueColor: const AlwaysStoppedAnimation(
+                            Color(0xFF00E5A0),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        "67%",
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              const Icon(
+                Icons.arrow_upward,
+                size: 14,
+                color: Color(0xFF00E5A0),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                "36% vs last month",
+                style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  /// ─── Helper: category color ───────────────────────────────────────────────
+  Widget _balanceRow(String label, String value, Color color) {
+    return Row(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
+        ),
+      ],
+    );
+  }
+
   Color _catColor(TransactionCategory cat) {
     switch (cat) {
       case TransactionCategory.food:
@@ -1388,206 +2260,6 @@ class _StatsTabState extends State<StatsTab> {
     }
   }
 
-  /// ─── Weekly Bar Chart (real data per day) ─────────────────────────────────
-  Widget _buildWeeklyBarChart(List<Transaction> transactions, bool isDark) {
-    // Build spending per weekday for the last 7 days
-    final now = DateTime.now();
-    final dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final List<double> dailySpend = List.filled(7, 0);
-    for (final t in transactions) {
-      if (!t.isPositive) {
-        final diff = now.difference(t.date).inDays;
-        if (diff < 7) {
-          final idx = t.date.weekday - 1; // Mon=0 … Sun=6
-          dailySpend[idx] += t.amount;
-        }
-      }
-    }
-    final maxY = dailySpend.reduce((a, b) => a > b ? a : b);
-    final chartMax = (maxY < 100 ? 1000.0 : maxY * 1.25);
-
-    return RepaintBoundary(
-      key: _chartKey,
-      child: Container(
-        height: 220,
-        padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkCard : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: BarChart(
-          BarChartData(
-            maxY: chartMax,
-            borderData: FlBorderData(show: false),
-            gridData: FlGridData(
-              show: true,
-              drawVerticalLine: false,
-              getDrawingHorizontalLine: (v) => FlLine(
-                color: Colors.grey.withValues(alpha: 0.15),
-                strokeWidth: 1,
-              ),
-            ),
-            titlesData: FlTitlesData(
-              show: true,
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  getTitlesWidget: (value, meta) {
-                    final idx = value.toInt();
-                    if (idx < 0 || idx >= 7) return const SizedBox();
-                    return Text(
-                      dayLabels[idx],
-                      style: GoogleFonts.poppins(
-                        color: Colors.grey,
-                        fontSize: 10,
-                      ),
-                    );
-                  },
-                ),
-              ),
-              leftTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              topTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              rightTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-            ),
-            barGroups: List.generate(7, (i) {
-              final colors = [
-                AppColors.primary,
-                AppColors.primaryLight,
-                AppColors.accent,
-                AppColors.primary,
-                AppColors.warning,
-                AppColors.primaryLight,
-                AppColors.accent,
-              ];
-              return BarChartGroupData(
-                x: i,
-                barRods: [
-                  BarChartRodData(
-                    toY: dailySpend[i] == 0 ? 10 : dailySpend[i],
-                    color: colors[i],
-                    width: 16,
-                    borderRadius: BorderRadius.circular(6),
-                    backDrawRodData: BackgroundBarChartRodData(
-                      show: true,
-                      toY: chartMax,
-                      color: Colors.grey.withValues(alpha: 0.08),
-                    ),
-                  ),
-                ],
-              );
-            }),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// ─── Donut Chart + Legend ─────────────────────────────────────────────────
-  Widget _buildDonutWithLegend(
-    Map<TransactionCategory, double> spending,
-    bool isDark,
-  ) {
-    if (spending.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            "No spending data yet",
-            style: GoogleFonts.poppins(color: Colors.grey),
-          ),
-        ),
-      );
-    }
-
-    final total = spending.values.fold(0.0, (a, b) => a + b);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          SizedBox(
-            height: 200,
-            child: PieChart(
-              PieChartData(
-                sectionsSpace: 2,
-                centerSpaceRadius: 55,
-                startDegreeOffset: -90,
-                sections: spending.entries.map((entry) {
-                  final pct = (entry.value / total * 100).toStringAsFixed(1);
-                  return PieChartSectionData(
-                    color: _catColor(entry.key),
-                    value: entry.value,
-                    title: '$pct%',
-                    radius: 50,
-                    titleStyle: GoogleFonts.poppins(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Legend
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            children: spending.entries.map((entry) {
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: _catColor(entry.key),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${entry.key.name[0].toUpperCase()}${entry.key.name.substring(1)} ₹${entry.value.toInt()}',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// ─── Savings Goal Card ────────────────────────────────────────────────────
   Widget _buildSavingsGoalCard(double goal, double savedSoFar, bool isDark) {
     final progress = (savedSoFar / goal).clamp(0.0, 1.0);
     final pctText = '${(progress * 100).toStringAsFixed(0)}%';
@@ -1597,12 +2269,10 @@ class _StatsTabState extends State<StatsTab> {
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.3)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -1616,9 +2286,9 @@ class _StatsTabState extends State<StatsTab> {
             children: [
               Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.savings_outlined,
-                    color: const Color(0xFF4CAF50),
+                    color: Color(0xFF4CAF50),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -1627,6 +2297,7 @@ class _StatsTabState extends State<StatsTab> {
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
+                      color: isDark ? Colors.white : const Color(0xFF1B3B52),
                     ),
                   ),
                 ],
@@ -1638,8 +2309,8 @@ class _StatsTabState extends State<StatsTab> {
                 ),
                 decoration: BoxDecoration(
                   color: isOnTrack
-                      ? const Color(0xFF4CAF50).withValues(alpha: 0.1)
-                      : Colors.red.withValues(alpha: 0.1),
+                      ? const Color(0xFF4CAF50).withOpacity(0.1)
+                      : Colors.red.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -1673,7 +2344,7 @@ class _StatsTabState extends State<StatsTab> {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 10,
-              backgroundColor: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+              backgroundColor: const Color(0xFF4CAF50).withOpacity(0.1),
               valueColor: AlwaysStoppedAnimation(
                 progress >= 1.0 ? Colors.amber : const Color(0xFF4CAF50),
               ),
@@ -1689,7 +2360,6 @@ class _StatsTabState extends State<StatsTab> {
     );
   }
 
-  /// ─── Category List with Budget Limits ─────────────────────────────────────
   Widget _buildCategoryListWithLimits(
     BuildContext context,
     List<Transaction> transactions,
@@ -1779,7 +2449,7 @@ class _StatsTabState extends State<StatsTab> {
                         child: Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.12),
+                            color: color.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Icon(
@@ -1799,7 +2469,7 @@ class _StatsTabState extends State<StatsTab> {
                 child: LinearProgressIndicator(
                   value: progress,
                   minHeight: 6,
-                  backgroundColor: color.withValues(alpha: 0.1),
+                  backgroundColor: color.withOpacity(0.1),
                   valueColor: AlwaysStoppedAnimation(
                     isOver ? Colors.red : color,
                   ),
@@ -1820,7 +2490,6 @@ class _StatsTabState extends State<StatsTab> {
     );
   }
 
-  /// ─── Set Limit Dialog ──────────────────────────────────────────────────────
   void _showSetLimitDialog(
     BuildContext context,
     TransactionCategory category,
@@ -1860,7 +2529,7 @@ class _StatsTabState extends State<StatsTab> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.withValues(alpha: 0.3),
+                      color: Colors.grey.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1916,18 +2585,14 @@ class _StatsTabState extends State<StatsTab> {
                       color: Colors.grey.withValues(alpha: 0.4),
                     ),
                     filled: true,
-                    fillColor: color.withValues(alpha: 0.06),
+                    fillColor: color.withOpacity(0.06),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: color.withValues(alpha: 0.3),
-                      ),
+                      borderSide: BorderSide(color: color.withOpacity(0.3)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: color.withValues(alpha: 0.3),
-                      ),
+                      borderSide: BorderSide(color: color.withOpacity(0.3)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -1951,9 +2616,7 @@ class _StatsTabState extends State<StatsTab> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          side: BorderSide(
-                            color: Colors.grey.withValues(alpha: 0.4),
-                          ),
+                          side: BorderSide(color: Colors.grey.withOpacity(0.4)),
                         ),
                         child: Text(
                           "Cancel",
@@ -2015,6 +2678,70 @@ class _StatsTabState extends State<StatsTab> {
     );
   }
 
+  Widget _buildAITipSection(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF1E3C72), const Color(0xFF2A5298)]
+              : [const Color(0xFFE0F7FA), Colors.white],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF00E5A0).withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.lightbulb_outline,
+              color: Color(0xFF00E5A0),
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "AI Financial Tip",
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF1B3B52),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "You spent 15% less on dining this week. Save that ₹1,200 to reach your goal faster!",
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: isDark ? Colors.white70 : Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBudgetBotBanner(BuildContext context) {
     return InteractiveScale(
       onTap: () => Navigator.push(
@@ -2032,7 +2759,7 @@ class _StatsTabState extends State<StatsTab> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
+              color: const Color(0xFF6C63FF).withOpacity(0.3),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -2043,7 +2770,7 @@ class _StatsTabState extends State<StatsTab> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(15),
               ),
               child: ClipRRect(
@@ -2077,7 +2804,7 @@ class _StatsTabState extends State<StatsTab> {
                   Text(
                     "Chat with Expensya to plan your month",
                     style: GoogleFonts.poppins(
-                      color: Colors.white.withValues(alpha: 0.8),
+                      color: Colors.white.withOpacity(0.8),
                       fontSize: 12,
                     ),
                   ),
@@ -2104,14 +2831,12 @@ class _StatsTabState extends State<StatsTab> {
     }
     setState(() => _isPinning = true);
     try {
-      // Push current spending data so the widget shows live numbers
       final txManager = TransactionManager();
       final now = DateTime.now();
       final thisMonth = DateTime(now.year, now.month, 1);
       final tomorrow = now.add(const Duration(days: 1));
       final monthlySpent = txManager.getTotalSpent(thisMonth, tomorrow);
 
-      // Capture the latest chart image
       await _captureWidgetImage();
 
       await WidgetHelper.updateWidgetData(
@@ -2119,12 +2844,8 @@ class _StatsTabState extends State<StatsTab> {
         message: '₹${monthlySpent.toInt()}',
       );
 
-      // Now open the OS pin-widget sheet
       await WidgetHelper.requestPinWidget();
 
-      // Re-push data after the pin dialog resolves so the widget shows live
-      // numbers immediately (closes the race where onUpdate runs before prefs
-      // are committed on first pin).
       await WidgetHelper.updateWidgetData(
         title: 'Monthly Spending',
         message: '₹${monthlySpent.toInt()}',
@@ -2173,7 +2894,7 @@ class _StatsTabState extends State<StatsTab> {
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+          color: Theme.of(context).dividerColor.withOpacity(0.1),
         ),
       ),
       child: Row(
@@ -2181,7 +2902,7 @@ class _StatsTabState extends State<StatsTab> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
+              color: AppColors.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(Icons.widgets_outlined, color: AppColors.primary),
@@ -2196,6 +2917,7 @@ class _StatsTabState extends State<StatsTab> {
                   style: GoogleFonts.poppins(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
+                    color: isDark ? Colors.white : const Color(0xFF1B3B52),
                   ),
                 ),
                 Text(
@@ -2208,7 +2930,7 @@ class _StatsTabState extends State<StatsTab> {
           TextButton(
             onPressed: _isPinning ? null : _pinWidget,
             style: TextButton.styleFrom(
-              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+              backgroundColor: AppColors.primary.withOpacity(0.1),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
