@@ -28,8 +28,15 @@ class ElectricityPage extends StatelessWidget {
           hint: 'Enter billing unit name',
           icon: Icons.location_on,
         ),
+        ServiceField(
+          label: 'Amount',
+          hint: 'Enter amount to pay',
+          icon: Icons.currency_rupee,
+          keyboardType: TextInputType.number,
+        ),
       ],
-      buttonLabel: 'Fetch Bill & Pay',
+      quickAmounts: ['500', '1000', '1500', '2000', '3000', '5000'],
+      buttonLabel: 'Pay Electricity Bill',
     );
   }
 }

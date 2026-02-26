@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../utils/theme_manager.dart';
 import '../../utils/transaction_manager.dart';
+import '../../models/transaction.dart';
 import '../../utils/auth_manager.dart';
 import '../pin_screen.dart';
 import '../../widgets/payment_result_dialog.dart';

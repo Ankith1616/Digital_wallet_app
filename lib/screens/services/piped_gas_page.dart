@@ -26,8 +26,15 @@ class PipedGasPage extends StatelessWidget {
           icon: Icons.confirmation_number,
           keyboardType: TextInputType.number,
         ),
+        ServiceField(
+          label: 'Amount',
+          hint: 'Enter bill amount',
+          icon: Icons.currency_rupee,
+          keyboardType: TextInputType.number,
+        ),
       ],
-      buttonLabel: 'Fetch Bill & Pay',
+      quickAmounts: ['200', '500', '800', '1200', '2000'],
+      buttonLabel: 'Pay Gas Bill',
     );
   }
 }

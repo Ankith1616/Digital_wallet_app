@@ -22,8 +22,15 @@ class WaterPage extends StatelessWidget {
           hint: 'e.g. HMWS, CMWSS',
           icon: Icons.business,
         ),
+        ServiceField(
+          label: 'Amount',
+          hint: 'Enter bill amount',
+          icon: Icons.currency_rupee,
+          keyboardType: TextInputType.number,
+        ),
       ],
-      buttonLabel: 'Fetch Bill & Pay',
+      quickAmounts: ['100', '250', '500', '1000', '1500'],
+      buttonLabel: 'Pay Water Bill',
     );
   }
 }
