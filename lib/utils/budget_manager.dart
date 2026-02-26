@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'transaction_manager.dart';
+import '../models/transaction.dart';
 
 class BudgetData {
   final double salary;

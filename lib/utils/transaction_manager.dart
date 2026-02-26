@@ -2,109 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firestore_service.dart';
-import 'package:wallet_g/utils/widget_helper.dart';
-
-enum TransactionCategory {
-  transfer,
-  food,
-  shopping,
-  bills,
-  entertainment,
-  transport,
-  health,
-  other,
-}
-
-class Transaction {
-  final String id;
-  final String title;
-  final DateTime date;
-  final double amount;
-  final bool isPositive;
-  final IconData icon;
-  final Color color;
-  final String details;
-  final TransactionCategory category;
-
-  Transaction({
-    required this.id,
-    required this.title,
-    required this.date,
-    required this.amount,
-    required this.isPositive,
-    required this.icon,
-    required this.color,
-    this.details = '',
-    this.category = TransactionCategory.other,
-  });
-
-  String get formattedDate {
-    // Simple formatter, can use split_bill implementation for better date formatting if needed
-    // For now keeping it simple as per original string based date
-    // Note: In real app use DateFormat
-    final now = DateTime.now();
-    final diff = now.difference(date);
-    if (diff.inDays == 0) return 'Today';
-    if (diff.inDays == 1) return 'Yesterday';
-    return '${date.day}/${date.month}/${date.year}';
-  }
-
-  String get formattedAmount {
-    return '${isPositive ? "+ " : "- "}₹${amount.abs().toStringAsFixed(0)}';
-  }
-}
+import '../models/transaction.dart';
+import 'widget_helper.dart';
 
 class TransactionManager extends ChangeNotifier {
   static final TransactionManager _instance = TransactionManager._internal();
   factory TransactionManager() => _instance;
   TransactionManager._internal();
 
-  final List<Transaction> _transactions = [
-    Transaction(
-      id: '1',
-      title: 'Netflix Subscription',
-      date: DateTime.now(),
-      amount: 199.0,
-      isPositive: false,
-      icon: Icons.movie_creation,
-      color: Colors.red,
-      details: 'Subscription',
-      category: TransactionCategory.entertainment,
-    ),
-    Transaction(
-      id: '2',
-      title: 'Received from Vamsi',
-      date: DateTime.now().subtract(const Duration(days: 1)),
-      amount: 5000.0,
-      isPositive: true,
-      icon: Icons.person,
-      color: Colors.green,
-      details: 'Transfer',
-      category: TransactionCategory.transfer,
-    ),
-    Transaction(
-      id: '3',
-      title: 'Electricity Bill',
-      date: DateTime.now().subtract(const Duration(days: 3)),
-      amount: 1250.0,
-      isPositive: false,
-      icon: Icons.lightbulb,
-      color: Colors.orange,
-      details: 'Utility',
-      category: TransactionCategory.bills,
-    ),
-    Transaction(
-      id: '4',
-      title: 'Grocery Mart',
-      date: DateTime.now().subtract(const Duration(days: 2)),
-      amount: 850.0,
-      isPositive: false,
-      icon: Icons.shopping_basket,
-      color: Colors.blue,
-      details: 'Food',
-      category: TransactionCategory.food,
-    ),
-  ];
+  final List<Transaction> _transactions = [];
 
   List<Transaction> get transactions => List.unmodifiable(_transactions);
   late final ValueNotifier<List<Transaction>> transactionsNotifier =

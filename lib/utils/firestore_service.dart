@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
 import 'package:flutter/material.dart';
-import 'transaction_manager.dart';
+import '../models/transaction.dart';
+import '../models/bank_account.dart';
+import '../utils/icon_helper.dart';
 
 class FirestoreService {
   static final FirestoreService _instance = FirestoreService._internal();
@@ -55,6 +57,11 @@ class FirestoreService {
     await _db.collection('users').doc(uid).update({'fcmToken': token});
   }
 
+  /// Update user profile data
+  Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
+    await _db.collection('users').doc(uid).set(data, SetOptions(merge: true));
+  }
+
   // ─── Transactions ───────────────────────────────────────────────
 
   /// Write a transaction to Firestore
@@ -96,9 +103,9 @@ class FirestoreService {
               date: (d['date'] as Timestamp).toDate(),
               amount: (d['amount'] as num).toDouble(),
               isPositive: d['isPositive'] as bool,
-              icon: IconData(
+              icon: IconHelper.getIcon(
                 d['iconCodePoint'] as int,
-                fontFamily: d['iconFontFamily'] as String,
+                d['iconFontFamily'] as String,
               ),
               color: Color(d['colorValue'] as int),
               details: d['details'] as String? ?? '',
@@ -129,9 +136,9 @@ class FirestoreService {
         date: (d['date'] as Timestamp).toDate(),
         amount: (d['amount'] as num).toDouble(),
         isPositive: d['isPositive'] as bool,
-        icon: IconData(
+        icon: IconHelper.getIcon(
           d['iconCodePoint'] as int,
-          fontFamily: d['iconFontFamily'] as String,
+          d['iconFontFamily'] as String,
         ),
         color: Color(d['colorValue'] as int),
         details: d['details'] as String? ?? '',
@@ -141,5 +148,30 @@ class FirestoreService {
         ),
       );
     }).toList();
+  }
+
+  // ─── Bank Accounts ─────────────────────────────────────────────
+
+  /// Link a new bank account
+  Future<void> addBankAccount(String uid, BankAccount bank) async {
+    await _db
+        .collection('users')
+        .doc(uid)
+        .collection('bank_accounts')
+        .doc(bank.id)
+        .set(bank.toMap());
+  }
+
+  /// Live stream of linked bank accounts
+  Stream<List<BankAccount>> linkedBanksStream(String uid) {
+    return _db
+        .collection('users')
+        .doc(uid)
+        .collection('bank_accounts')
+        .snapshots()
+        .map(
+          (snap) =>
+              snap.docs.map((doc) => BankAccount.fromMap(doc.data())).toList(),
+        );
   }
 }

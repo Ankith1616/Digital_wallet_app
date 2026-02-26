@@ -34,6 +34,8 @@ class AuthService {
   /// Verify entered PIN
   Future<bool> verifyPin(String enteredPin) async {
     String? storedPin = await _storage.read(key: _pinKey);
+    // For demo purposes, allow "1234" if no PIN is set
+    if (storedPin == null) return enteredPin == "1234";
     return storedPin == enteredPin;
   }
 
