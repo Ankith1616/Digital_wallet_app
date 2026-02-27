@@ -512,7 +512,7 @@ class _DashboardTabState extends State<DashboardTab> {
                           );
                         },
                         child: Text(
-                          "View All",
+                          L10n.s("view_all"),
                           style: GoogleFonts.poppins(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w600,
@@ -581,7 +581,7 @@ class _DashboardTabState extends State<DashboardTab> {
                           );
                         },
                         child: Text(
-                          "View All",
+                          L10n.s("view_all"),
                           style: GoogleFonts.poppins(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w600,
@@ -601,7 +601,7 @@ class _DashboardTabState extends State<DashboardTab> {
                           child: Padding(
                             padding: const EdgeInsets.all(20),
                             child: Text(
-                              "No recent transactions",
+                              L10n.s("no_recent_transactions"),
                               style: GoogleFonts.poppins(color: Colors.grey),
                             ),
                           ),
@@ -685,7 +685,9 @@ class _DashboardTabState extends State<DashboardTab> {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Text(
-          _hasPermission ? "No contacts found" : "Permission required",
+          _hasPermission
+              ? L10n.s("no_contacts_found")
+              : L10n.s("permission_required"),
           style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
         ),
       );
@@ -749,43 +751,51 @@ class _DashboardTabState extends State<DashboardTab> {
   Widget _buildServicesGrid(BuildContext context) {
     final services = [
       {
+        'id': 'recharge',
         'icon': Icons.phone_android,
-        'label': 'Recharge',
+        'label': L10n.s("recharge"),
         'color': AppColors.primary, // electric cyan
       },
       {
+        'id': 'electricity',
         'icon': Icons.lightbulb,
-        'label': 'Electricity',
+        'label': L10n.s("electricity"),
         'color': const Color(0xFFFFD166), // gold
       },
       {
+        'id': 'water',
         'icon': Icons.water_drop,
-        'label': 'Water',
+        'label': L10n.s("water"),
         'color': const Color(0xFF6EE9FF), // light cyan
       },
       {
+        'id': 'dth',
         'icon': Icons.tv,
-        'label': 'DTH',
+        'label': L10n.s("dth"),
         'color': const Color(0xFFFF4F6D),
       }, // coral rose
       {
+        'id': 'fastag',
         'icon': Icons.directions_car,
-        'label': 'FASTag',
+        'label': L10n.s("fastag"),
         'color': const Color(0xFF00E5A0), // teal neon
       },
       {
+        'id': 'broadband',
         'icon': Icons.wifi,
-        'label': 'Broadband',
+        'label': L10n.s("broadband"),
         'color': const Color(0xFF7B2FBE), // nebula purple
       },
       {
+        'id': 'gas',
         'icon': Icons.local_gas_station,
-        'label': 'Gas',
+        'label': L10n.s("gas"),
         'color': const Color(0xFFFF8C42), // amber
       },
       {
+        'id': 'more',
         'icon': Icons.more_horiz,
-        'label': 'More',
+        'label': L10n.s("more"),
         'color': const Color(0xFF4A5580),
       },
     ];
@@ -805,43 +815,43 @@ class _DashboardTabState extends State<DashboardTab> {
         final color = svc['color'] as Color;
         return InteractiveScale(
           onTap: () {
-            final label = svc['label'] as String;
-            if (label == 'More') {
+            final id = svc['id'] as String;
+            if (id == 'more') {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const MoreServicesScreen()),
               );
-            } else if (label == 'Recharge') {
+            } else if (id == 'recharge') {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const MobileRechargePage()),
               );
-            } else if (label == 'Electricity') {
+            } else if (id == 'electricity') {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ElectricityPage()),
               );
-            } else if (label == 'Water') {
+            } else if (id == 'water') {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const WaterPage()),
               );
-            } else if (label == 'DTH') {
+            } else if (id == 'dth') {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const DthRechargePage()),
               );
-            } else if (label == 'FASTag') {
+            } else if (id == 'fastag') {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const FastagPage()),
               );
-            } else if (label == 'Broadband') {
+            } else if (id == 'broadband') {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const BroadbandPage()),
               );
-            } else if (label == 'Gas') {
+            } else if (id == 'gas') {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const PipedGasPage()),

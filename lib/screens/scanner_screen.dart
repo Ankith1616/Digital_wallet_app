@@ -13,6 +13,7 @@ import 'send_money_screen.dart';
 import 'wallet_screen.dart';
 import '../widgets/payment_result_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/localization_helper.dart';
 
 class ScannerTab extends StatefulWidget {
   const ScannerTab({super.key});
@@ -72,9 +73,9 @@ class _ScannerTabState extends State<ScannerTab> {
       final capture = await _controller.analyzeImage(image.path);
       if (capture == null || capture.barcodes.isEmpty) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No QR code found in image')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(L10n.s("no_qr_found"))));
         }
       } else {
         _onDetect(capture);
@@ -132,7 +133,7 @@ class _ScannerTabState extends State<ScannerTab> {
               const SizedBox(height: 16),
 
               Text(
-                "QR Code Detected!",
+                L10n.s("qr_detected"),
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -161,7 +162,7 @@ class _ScannerTabState extends State<ScannerTab> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Paying to",
+                            L10n.s("paying_to"),
                             style: GoogleFonts.poppins(
                               fontSize: 11,
                               color: Colors.grey[500],
@@ -208,7 +209,7 @@ class _ScannerTabState extends State<ScannerTab> {
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,
                     ),
-                    hintText: "Enter amount",
+                    hintText: L10n.s("enter_amount"),
                     hintStyle: GoogleFonts.poppins(
                       color: Colors.grey[400],
                       fontSize: 18,
@@ -231,7 +232,7 @@ class _ScannerTabState extends State<ScannerTab> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            'Please enter a valid amount',
+                            L10n.s("enter_valid_amount"),
                             style: GoogleFonts.spaceGrotesk(),
                           ),
                           backgroundColor: AppColors.error,
@@ -307,15 +308,15 @@ class _ScannerTabState extends State<ScannerTab> {
                     TransactionManager().addTransaction(
                       Transaction(
                         id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        title: 'Paid to $name',
+                        title: '${L10n.s("paid_to")} $name',
                         date: DateTime.now(),
                         amount: amountDouble,
                         isPositive: false,
                         icon: Icons.person,
                         color: AppColors.primary,
                         details: confirmation.applyRewards
-                            ? "Rewards Applied"
-                            : "UPI Payment",
+                            ? L10n.s("rewards_applied")
+                            : L10n.s("upi_payment"),
                       ),
                     );
 
@@ -332,7 +333,7 @@ class _ScannerTabState extends State<ScannerTab> {
                     elevation: 0,
                   ),
                   child: Text(
-                    "Pay Now",
+                    L10n.s("pay_now"),
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       color: Colors.white,
@@ -350,7 +351,7 @@ class _ScannerTabState extends State<ScannerTab> {
                   _resetScanner();
                 },
                 child: Text(
-                  "Scan Again",
+                  L10n.s("scan_again"),
                   style: GoogleFonts.poppins(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w500,
@@ -370,8 +371,8 @@ class _ScannerTabState extends State<ScannerTab> {
     PaymentResultDialog.show(
       context,
       success: true,
-      title: 'Payment Successful!',
-      subtitle: 'Your transaction has been completed.',
+      title: L10n.s("payment_successful"),
+      subtitle: L10n.s("transaction_completed"),
       amount: amount,
       recipient: recipient,
       onDone: () => _resetScanner(),
@@ -422,7 +423,7 @@ class _ScannerTabState extends State<ScannerTab> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      "Scan any QR code",
+                      L10n.s("scan_any_qr"),
                       style: GoogleFonts.poppins(
                         color: Colors.white,
                         fontSize: 14,
@@ -452,7 +453,7 @@ class _ScannerTabState extends State<ScannerTab> {
                 children: [
                   const SizedBox(height: 320),
                   Text(
-                    "Point camera at a QR code",
+                    L10n.s("point_camera_qr"),
                     style: GoogleFonts.poppins(
                       color: Colors.white60,
                       fontSize: 13,
@@ -514,7 +515,7 @@ class _ScannerTabState extends State<ScannerTab> {
                     children: [
                       _quickAction(
                         Icons.contacts,
-                        "Pay\nContacts",
+                        L10n.s("pay_contacts"),
                         () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -524,7 +525,7 @@ class _ScannerTabState extends State<ScannerTab> {
                       ),
                       _quickAction(
                         Icons.phone_android,
-                        "Pay Phone\nNumber",
+                        L10n.s("pay_phone_number"),
                         () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -534,7 +535,7 @@ class _ScannerTabState extends State<ScannerTab> {
                       ),
                       _quickAction(
                         Icons.swap_horiz,
-                        "Self\nTransfer",
+                        L10n.s("self_transfer"),
                         () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -544,7 +545,7 @@ class _ScannerTabState extends State<ScannerTab> {
                       ),
                       _quickAction(
                         Icons.account_balance,
-                        "Bank\nTransfer",
+                        L10n.s("bank_transfer"),
                         () => Navigator.push(
                           context,
                           MaterialPageRoute(
