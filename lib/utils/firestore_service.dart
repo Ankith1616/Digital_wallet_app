@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
 import 'package:flutter/material.dart';
 import '../models/transaction.dart';
 import '../models/bank_account.dart';
+import '../models/app_notification.dart';
 import '../utils/icon_helper.dart';
 
 class FirestoreService {
@@ -60,6 +61,85 @@ class FirestoreService {
   /// Update user profile data
   Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
     await _db.collection('users').doc(uid).set(data, SetOptions(merge: true));
+  }
+
+  // ─── Notifications ─────────────────────────────────────────────
+
+  /// Add a notification to Firestore
+  Future<void> addNotification(String uid, AppNotification notification) async {
+    await _db
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .doc(notification.id)
+        .set(notification.toMap());
+  }
+
+  /// Live stream of notifications for a user, newest first
+  Stream<List<AppNotification>> notificationsStream(String uid) {
+    return _db
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .orderBy('date', descending: true)
+        .limit(50)
+        .snapshots()
+        .map(
+          (snap) => snap.docs
+              .map((doc) => AppNotification.fromMap(doc.data()))
+              .toList(),
+        );
+  }
+
+  /// Mark a notification as read
+  Future<void> markNotificationAsRead(String uid, String notificationId) async {
+    await _db
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .doc(notificationId)
+        .update({'isRead': true});
+  }
+
+  /// Mark all notifications as read for a user
+  Future<void> markAllNotificationsAsRead(String uid) async {
+    final batch = _db.batch();
+    final snapshot = await _db
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .where('isRead', isEqualTo: false)
+        .get();
+
+    for (var doc in snapshot.docs) {
+      batch.update(doc.reference, {'isRead': true});
+    }
+    await batch.commit();
+  }
+
+  /// Delete all notifications for a user
+  Future<void> clearAllNotifications(String uid) async {
+    final batch = _db.batch();
+    final snapshot = await _db
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .get();
+
+    for (var doc in snapshot.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
+  }
+
+  /// Delete a specific notification
+  Future<void> deleteNotification(String uid, String notificationId) async {
+    await _db
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .doc(notificationId)
+        .delete();
   }
 
   // ─── Transactions ───────────────────────────────────────────────
@@ -154,12 +234,38 @@ class FirestoreService {
 
   /// Link a new bank account
   Future<void> addBankAccount(String uid, BankAccount bank) async {
+    // Check if any other bank accounts exist for this user
+    final snapshot = await _db
+        .collection('users')
+        .doc(uid)
+        .collection('bank_accounts')
+        .limit(1)
+        .get();
+
+    final bool isFirstAccount = snapshot.docs.isEmpty;
+    final accountToSave = isFirstAccount
+        ? bank.copyWith(isPrimary: true)
+        : bank;
+
     await _db
         .collection('users')
         .doc(uid)
         .collection('bank_accounts')
-        .doc(bank.id)
-        .set(bank.toMap());
+        .doc(accountToSave.id)
+        .set(accountToSave.toMap());
+
+    // Trigger notification
+    await addNotification(
+      uid,
+      AppNotification(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: "Bank Account Added 🏦",
+        message:
+            "${bank.bankName} account (****${bank.accountNumber.substring(bank.accountNumber.length - 4)}) has been linked.",
+        date: DateTime.now(),
+        type: NotificationType.security,
+      ),
+    );
   }
 
   /// Live stream of linked bank accounts
@@ -173,5 +279,124 @@ class FirestoreService {
           (snap) =>
               snap.docs.map((doc) => BankAccount.fromMap(doc.data())).toList(),
         );
+  }
+
+  /// Update the balance of a specific linked bank account
+  Future<void> updateBankAccountBalance(
+    String uid,
+    String bankId,
+    double delta,
+  ) async {
+    await _db
+        .collection('users')
+        .doc(uid)
+        .collection('bank_accounts')
+        .doc(bankId)
+        .update({'balance': FieldValue.increment(delta)});
+  }
+
+  /// Delete a specific linked bank account
+  Future<void> deleteBankAccount(String uid, String bankId) async {
+    // Fetch bank info before deleting for the notification
+    final doc = await _db
+        .collection('users')
+        .doc(uid)
+        .collection('bank_accounts')
+        .doc(bankId)
+        .get();
+
+    final bankData = doc.data();
+
+    await _db
+        .collection('users')
+        .doc(uid)
+        .collection('bank_accounts')
+        .doc(bankId)
+        .delete();
+
+    if (bankData != null) {
+      final bankName = bankData['bankName'] ?? 'Bank Account';
+      final accNum = bankData['accountNumber'] as String? ?? '';
+      final lastFour = accNum.length > 4
+          ? accNum.substring(accNum.length - 4)
+          : '';
+
+      // Trigger notification
+      await addNotification(
+        uid,
+        AppNotification(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          title: "Bank Account Removed ⚠️",
+          message:
+              "$bankName (****$lastFour) has been unlinked from your wallet.",
+          date: DateTime.now(),
+          type: NotificationType.security,
+        ),
+      );
+    }
+  }
+
+  /// Set a specific bank account as the primary one
+  Future<void> setPrimaryBankAccount(String uid, String bankId) async {
+    final batch = _db.batch();
+    final collectionRef = _db
+        .collection('users')
+        .doc(uid)
+        .collection('bank_accounts');
+
+    // Fetch all current bank accounts to unset any existing primary flags
+    final querySnapshot = await collectionRef.get();
+
+    for (var doc in querySnapshot.docs) {
+      if (doc.id == bankId) {
+        batch.update(doc.reference, {'isPrimary': true});
+      } else if (doc.data()['isPrimary'] == true) {
+        batch.update(doc.reference, {'isPrimary': false});
+      }
+    }
+
+    await batch.commit();
+  }
+
+  /// Update the transaction PIN for a specific bank account
+  Future<void> updateBankAccountPin(
+    String uid,
+    String bankId,
+    String newPinHash,
+  ) async {
+    await _db
+        .collection('users')
+        .doc(uid)
+        .collection('bank_accounts')
+        .doc(bankId)
+        .update({'pinHash': newPinHash});
+
+    // Trigger notification
+    final doc = await _db
+        .collection('users')
+        .doc(uid)
+        .collection('bank_accounts')
+        .doc(bankId)
+        .get();
+    final bankData = doc.data();
+    if (bankData != null) {
+      final bankName = bankData['bankName'] ?? 'Bank Account';
+      final accNum = bankData['accountNumber'] as String? ?? '';
+      final lastFour = accNum.length > 4
+          ? accNum.substring(accNum.length - 4)
+          : '';
+
+      await addNotification(
+        uid,
+        AppNotification(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          title: "Bank PIN Updated 🔐",
+          message:
+              "Transaction PIN for $bankName (****$lastFour) has been updated.",
+          date: DateTime.now(),
+          type: NotificationType.security,
+        ),
+      );
+    }
   }
 }

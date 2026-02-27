@@ -6,6 +6,9 @@ import '../../models/transaction.dart';
 import '../../utils/auth_manager.dart';
 import '../pin_screen.dart';
 import '../../widgets/payment_result_dialog.dart';
+import '../../widgets/payment_confirmation_sheet.dart';
+import '../../utils/firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Reusable service page template for bill payment / recharge / booking flows.
 class ServicePageTemplate extends StatefulWidget {
@@ -98,7 +101,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                   gradient: LinearGradient(
                     colors: [
                       widget.themeColor,
-                      widget.themeColor.withValues(alpha: 0.7),
+                      widget.themeColor.withOpacity(0.7),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -106,7 +109,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: widget.themeColor.withValues(alpha: 0.3),
+                      color: widget.themeColor.withOpacity(0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -117,7 +120,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Icon(widget.icon, color: Colors.white, size: 30),
@@ -186,7 +189,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                                   ? widget.themeColor
                                   : Theme.of(
                                       context,
-                                    ).dividerColor.withValues(alpha: 0.1),
+                                    ).dividerColor.withOpacity(0.1),
                               width: isSelected ? 2 : 1,
                             ),
                           ),
@@ -273,7 +276,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                                 ? widget.themeColor
                                 : Theme.of(
                                     context,
-                                  ).dividerColor.withValues(alpha: 0.15),
+                                  ).dividerColor.withOpacity(0.15),
                           ),
                         ),
                         child: Text(
@@ -324,9 +327,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                   color: isDark ? AppColors.darkCard : Colors.grey[50],
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: Theme.of(
-                      context,
-                    ).dividerColor.withValues(alpha: 0.08),
+                    color: Theme.of(context).dividerColor.withOpacity(0.08),
                   ),
                 ),
                 child: Row(
@@ -359,7 +360,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
+          color: Theme.of(context).dividerColor.withOpacity(0.08),
         ),
       ),
       child: TextFormField(
@@ -401,6 +402,11 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
   }
 
   Future<void> _onSubmit() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final auth = AuthService();
+
     // 1. Find amount
     String amount = '0';
     for (var key in _controllers.keys) {
@@ -411,18 +417,68 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
       }
     }
     if (amount.isEmpty) amount = '0';
+    final amountDouble = double.tryParse(amount) ?? 0.0;
 
-    // PIN Verification
-    final auth = AuthService();
-    final hasPin = await auth.hasPin();
-    if (mounted) {
-      final mode = hasPin ? PinMode.verify : PinMode.create;
-      final verified = await Navigator.push(
+    // ─── Unified Multi-Step Payment Process ────────────────
+    // 1. Show Confirmation Sheet (Rewards + Bank + Auth Choice)
+    final confirmation = await PaymentConfirmationSheet.show(
+      context,
+      user.uid,
+      amountDouble,
+    );
+
+    if (confirmation == null) return; // Cancelled or Limit Failure inside sheet
+
+    if (!mounted) return;
+
+    // 2. Authentication Verification
+    bool verified = false;
+    final selectedBank = confirmation.bankAccount;
+
+    if (confirmation.useInstantPay) {
+      if (auth.canProcessInstantPay(amountDouble)) {
+        verified = true;
+        await auth.recordInstantPayUsage(amountDouble);
+      } else {
+        // Explicitly fail as per user request
+        await PaymentResultDialog.show(
+          context,
+          success: false,
+          title: 'Payment Failed',
+          subtitle:
+              'Instant Payment limit exceeded. Cumulative daily limit is ₹2000.',
+          amount: amount,
+          recipient: widget.title,
+        );
+        return;
+      }
+    } else if (confirmation.useBiometric) {
+      verified = await auth.authenticateBiometrics();
+    } else {
+      // Default: PIN Verification
+      final result = await Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => PinScreen(mode: mode)),
+        MaterialPageRoute(
+          builder: (_) => PinScreen(
+            mode: PinMode.verifyBank,
+            expectedBankPinHash: selectedBank.pinHash,
+          ),
+        ),
       );
-      if (verified != true) return;
+      verified = result == true;
     }
+
+    if (!verified) return;
+    if (!mounted) return;
+
+    // 3. Deduct balance from the specific bank account
+    await FirestoreService().updateBankAccountBalance(
+      user.uid,
+      selectedBank.id,
+      -amountDouble,
+    );
+
+    if (!verified) return;
 
     if (!mounted) return;
 

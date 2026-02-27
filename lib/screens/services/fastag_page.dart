@@ -34,3 +34,4 @@ class FastagPage extends StatelessWidget {
     );
   }
 }
+

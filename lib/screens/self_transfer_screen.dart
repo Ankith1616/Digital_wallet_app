@@ -262,3 +262,4 @@ class SelfTransferScreen extends StatelessWidget {
     );
   }
 }
+

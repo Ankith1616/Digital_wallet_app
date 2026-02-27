@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/theme_manager.dart';
+import '../utils/firestore_service.dart';
+import '../models/app_notification.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
@@ -8,49 +11,14 @@ class NotificationsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final user = FirebaseAuth.instance.currentUser;
 
-    final List<_NotificationItem> notifications = [
-      _NotificationItem(
-        title: "Cashback Received! 💰",
-        message: "You've earned ₹50 cashback on your last recharge.",
-        time: "2 mins ago",
-        icon: Icons.account_balance_wallet,
-        color: Colors.green,
-        isRead: false,
-      ),
-      _NotificationItem(
-        title: "Security Alert 🛡️",
-        message: "Your account was logged in from a new device (Windows).",
-        time: "1 hour ago",
-        icon: Icons.security,
-        color: Colors.blue,
-        isRead: false,
-      ),
-      _NotificationItem(
-        title: "Bill Payment Reminder 📝",
-        message: "Your Electricity bill of ₹2,450 is due in 3 days.",
-        time: "5 hours ago",
-        icon: Icons.receipt_long,
-        color: Colors.orange,
-        isRead: true,
-      ),
-      _NotificationItem(
-        title: "Referral Bonus 🎁",
-        message: "Your friend Rahul just joined! You both earned ₹100.",
-        time: "Yesterday",
-        icon: Icons.card_giftcard,
-        color: Colors.purple,
-        isRead: true,
-      ),
-      _NotificationItem(
-        title: "System Update ⚙️",
-        message: "Version 1.0.0 is now live with enhanced security.",
-        time: "2 days ago",
-        icon: Icons.system_update,
-        color: Colors.grey,
-        isRead: true,
-      ),
-    ];
+    if (user == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text("Notifications")),
+        body: _buildEmptyState(),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -59,18 +27,73 @@ class NotificationsScreen extends StatelessWidget {
           style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        actions: [
+          TextButton.icon(
+            onPressed: () =>
+                FirestoreService().markAllNotificationsAsRead(user.uid),
+            icon: const Icon(Icons.done_all, size: 18),
+            label: Text("Read All", style: GoogleFonts.poppins(fontSize: 12)),
+          ),
+          IconButton(
+            onPressed: () => _confirmClearAll(context, user.uid),
+            icon: const Icon(Icons.delete_sweep_outlined),
+            tooltip: "Clear All",
+          ),
+        ],
       ),
-      body: notifications.isEmpty
-          ? _buildEmptyState()
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: notifications.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final item = notifications[index];
-                return _buildNotificationCard(context, item, isDark);
-              },
+      body: StreamBuilder<List<AppNotification>>(
+        stream: FirestoreService().notificationsStream(user.uid),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final notifications = snapshot.data ?? [];
+
+          if (notifications.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: notifications.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final item = notifications[index];
+              return _buildNotificationCard(context, item, isDark, user.uid);
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void _confirmClearAll(BuildContext context, String uid) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Clear All?", style: GoogleFonts.poppins()),
+        content: Text(
+          "This will delete all your notifications permanently.",
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("CANCEL", style: GoogleFonts.poppins()),
+          ),
+          TextButton(
+            onPressed: () {
+              FirestoreService().clearAllNotifications(uid);
+              Navigator.pop(context);
+            },
+            child: Text(
+              "CLEAR ALL",
+              style: GoogleFonts.poppins(color: Colors.red),
             ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -100,9 +123,23 @@ class NotificationsScreen extends StatelessWidget {
 
   Widget _buildNotificationCard(
     BuildContext context,
-    _NotificationItem item,
+    AppNotification item,
     bool isDark,
+    String uid,
   ) {
+    // Basic time formatting
+    final now = DateTime.now();
+    final diff = now.difference(item.date);
+    String timeStr;
+    if (diff.inMinutes < 1) {
+      timeStr = "Just now";
+    } else if (diff.inMinutes < 60) {
+      timeStr = "${diff.inMinutes}m ago";
+    } else if (diff.inHours < 24) {
+      timeStr = "${diff.inHours}h ago";
+    } else {
+      timeStr = "${diff.inDays}d ago";
+    }
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : Colors.white,
@@ -165,7 +202,7 @@ class NotificationsScreen extends StatelessWidget {
               ),
             ),
             Text(
-              item.time,
+              timeStr,
               style: GoogleFonts.poppins(color: Colors.grey, fontSize: 10),
             ),
           ],
@@ -181,28 +218,43 @@ class NotificationsScreen extends StatelessWidget {
             ),
           ),
         ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!item.isRead)
+              IconButton(
+                icon: const Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.green,
+                  size: 20,
+                ),
+                onPressed: () =>
+                    FirestoreService().markNotificationAsRead(uid, item.id),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: Icon(
+                Icons.delete_outline,
+                color: Colors.red.withOpacity(0.7),
+                size: 20,
+              ),
+              onPressed: () =>
+                  FirestoreService().deleteNotification(uid, item.id),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
         onTap: () {
-          // Handle tap
+          if (!item.isRead) {
+            FirestoreService().markNotificationAsRead(uid, item.id);
+          }
         },
       ),
     );
   }
 }
 
-class _NotificationItem {
-  final String title;
-  final String message;
-  final String time;
-  final IconData icon;
-  final Color color;
-  final bool isRead;
-
-  _NotificationItem({
-    required this.title,
-    required this.message,
-    required this.time,
-    required this.icon,
-    required this.color,
-    required this.isRead,
-  });
-}
+// Deleted _NotificationItem class as it is replaced by AppNotification model

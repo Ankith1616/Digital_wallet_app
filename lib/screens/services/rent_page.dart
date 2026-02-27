@@ -33,3 +33,4 @@ class RentPage extends StatelessWidget {
     );
   }
 }
+

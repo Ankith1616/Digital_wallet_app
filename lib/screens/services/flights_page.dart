@@ -37,3 +37,4 @@ class FlightsPage extends StatelessWidget {
     );
   }
 }
+

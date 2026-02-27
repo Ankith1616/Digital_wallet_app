@@ -36,3 +36,4 @@ class HotelsPage extends StatelessWidget {
     );
   }
 }
+

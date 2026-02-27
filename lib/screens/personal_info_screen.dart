@@ -173,7 +173,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     onTap: _pickImage,
                     child: CircleAvatar(
                       radius: 50,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      backgroundColor: AppColors.primary.withOpacity(0.1),
                       child: _pickedFile != null
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(50),
@@ -342,7 +342,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
             color: isDark ? AppColors.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
+              color: Theme.of(context).dividerColor.withOpacity(0.08),
             ),
           ),
           child: TextField(
@@ -350,16 +350,14 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
             enabled: enabled,
             style: GoogleFonts.poppins(
               fontSize: 14,
-              color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(
-                alpha: enabled ? 1.0 : 0.6,
-              ),
+              color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(enabled ? 1.0 : 0.6,),
             ),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
               prefixIcon: Icon(
                 icon,
-                color: AppColors.primary.withValues(alpha: enabled ? 1.0 : 0.6),
+                color: AppColors.primary.withOpacity(enabled ? 1.0 : 0.6),
                 size: 20,
               ),
               border: InputBorder.none,
@@ -370,3 +368,4 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     );
   }
 }
+

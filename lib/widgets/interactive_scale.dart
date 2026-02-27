@@ -90,3 +90,4 @@ class _InteractiveScaleState extends State<InteractiveScale>
     );
   }
 }
+

@@ -14,7 +14,6 @@ import 'send_money_screen.dart';
 import 'self_transfer_screen.dart';
 import 'setup_screen.dart';
 import 'wallet_screen.dart';
-import 'pin_screen.dart';
 import 'more_services_screen.dart';
 import 'transaction_history_screen.dart';
 import 'package:pdf/pdf.dart';
@@ -39,6 +38,7 @@ import 'notifications_screen.dart';
 import 'help_support_screen.dart';
 import 'budget_bot_screen.dart';
 import 'offers_rewards_screen.dart';
+import '../utils/localization_helper.dart';
 
 // ============================================
 // 1. DASHBOARD / HOME SCREEN (PhonePe style)
@@ -330,8 +330,8 @@ class _DashboardTabState extends State<DashboardTab> {
                                 borderRadius: BorderRadius.circular(18),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: banner.gradient.first.withValues(
-                                      alpha: 0.35,
+                                    color: banner.gradient.first.withOpacity(
+                                      0.35,
                                     ),
                                     blurRadius: 12,
                                     offset: const Offset(0, 6),
@@ -374,8 +374,8 @@ class _DashboardTabState extends State<DashboardTab> {
                                           Text(
                                             banner.subtitle,
                                             style: GoogleFonts.poppins(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.85,
+                                              color: Colors.white.withOpacity(
+                                                0.85,
                                               ),
                                               fontSize: 12,
                                               height: 1.4,
@@ -386,9 +386,7 @@ class _DashboardTabState extends State<DashboardTab> {
                                     ),
                                     Icon(
                                       Icons.arrow_forward_ios,
-                                      color: Colors.white.withValues(
-                                        alpha: 0.6,
-                                      ),
+                                      color: Colors.white.withOpacity(0.6),
                                       size: 18,
                                     ),
                                   ],
@@ -433,7 +431,7 @@ class _DashboardTabState extends State<DashboardTab> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // === MONEY TRANSFER SECTION ===
-                  _sectionTitle("Money Transfer"),
+                  _sectionTitle(L10n.s("transfer_money")),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -441,7 +439,7 @@ class _DashboardTabState extends State<DashboardTab> {
                       _circleAction(
                         context,
                         Icons.phone_android,
-                        "To Mobile",
+                        L10n.s("to_mobile"),
                         AppColors.primary,
                         () {
                           Navigator.push(
@@ -455,7 +453,7 @@ class _DashboardTabState extends State<DashboardTab> {
                       _circleAction(
                         context,
                         Icons.swap_horiz,
-                        "To Self",
+                        L10n.s("to_self"),
                         const Color(0xFF00E5A0), // teal neon
                         () {
                           Navigator.push(
@@ -469,31 +467,21 @@ class _DashboardTabState extends State<DashboardTab> {
                       _circleAction(
                         context,
                         Icons.settings_suggest_outlined,
-                        "Setup",
+                        L10n.s("setup"),
                         const Color(0xFF6C63FF), // purple
-                        () async {
-                          final verified = await Navigator.push(
+                        () {
+                          Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  const PinScreen(mode: PinMode.verify),
+                              builder: (_) => const SetupScreen(),
                             ),
                           );
-
-                          if (verified == true && context.mounted) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const SetupScreen(),
-                              ),
-                            );
-                          }
                         },
                       ),
                       _circleAction(
                         context,
                         Icons.account_balance_wallet,
-                        "Check Balance",
+                        L10n.s("check_balance"),
                         const Color(0xFFFFD166), // gold
                         () {
                           Navigator.push(
@@ -513,7 +501,7 @@ class _DashboardTabState extends State<DashboardTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _sectionTitle("People"),
+                      _sectionTitle(L10n.s("people")),
                       TextButton(
                         onPressed: () {
                           Navigator.push(
@@ -540,14 +528,14 @@ class _DashboardTabState extends State<DashboardTab> {
                   const SizedBox(height: 24),
 
                   // === RECHARGE & BILLS ===
-                  _sectionTitle("Recharge & Pay Bills"),
+                  _sectionTitle(L10n.s("recharge_pay_bills")),
                   const SizedBox(height: 12),
                   _buildServicesGrid(context),
 
                   const SizedBox(height: 24),
 
                   // === PROMOTIONS ===
-                  _sectionTitle("Offers & Rewards"),
+                  _sectionTitle(L10n.s("offers_rewards")),
                   const SizedBox(height: 12),
                   SizedBox(
                     height: 140,
@@ -582,7 +570,7 @@ class _DashboardTabState extends State<DashboardTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _sectionTitle("Recent Transactions"),
+                      _sectionTitle(L10n.s("recent_transactions")),
                       TextButton(
                         onPressed: () {
                           Navigator.push(
@@ -902,7 +890,7 @@ class _DashboardTabState extends State<DashboardTab> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [color, color.withValues(alpha: 0.7)],
+            colors: [color, color.withOpacity(0.7)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -912,7 +900,7 @@ class _DashboardTabState extends State<DashboardTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 32),
+            Icon(icon, color: Colors.white.withOpacity(0.8), size: 32),
             const Spacer(),
             Text(
               title,
@@ -1105,17 +1093,47 @@ class _StatsTabState extends State<StatsTab> {
         valueListenable: TransactionManager().transactionsNotifier,
         builder: (context, allTransactions, _) {
           final transactions = _getFilteredTransactions(allTransactions);
-          double totalSpent = 0;
-          double totalReceived = 0;
-          Set<String> uniquePayees = {};
-          for (var t in transactions) {
-            if (t.isPositive) {
-              totalReceived += t.amount;
-            } else {
-              totalSpent += t.amount;
-            }
-            uniquePayees.add(t.title);
-          }
+          final now = DateTime.now();
+          final currentIncome = TransactionManager().getMonthlyIncome(
+            now.month,
+            now.year,
+          );
+          final currentExpense = TransactionManager().getMonthlyExpense(
+            now.month,
+            now.year,
+          );
+
+          final prevMonth = now.month == 1 ? 12 : now.month - 1;
+          final prevYear = now.month == 1 ? now.year - 1 : now.year;
+          final prevIncome = TransactionManager().getMonthlyIncome(
+            prevMonth,
+            prevYear,
+          );
+          final prevExpense = TransactionManager().getMonthlyExpense(
+            prevMonth,
+            prevYear,
+          );
+
+          final avgIncome = TransactionManager().getAverageMonthlyIncome();
+          final avgExpense = TransactionManager().getAverageMonthlyExpense();
+
+          final incomeTrend = prevIncome > 0
+              ? "${((currentIncome - prevIncome) / prevIncome * 100).toStringAsFixed(0)}%"
+              : null;
+          final expenseTrend = prevExpense > 0
+              ? "${((currentExpense - prevExpense) / prevExpense * 100).toStringAsFixed(0)}%"
+              : null;
+
+          final budget = BudgetManager().budgetData;
+          final savingsGoal = budget?.savingsGoal ?? 5000.0;
+          final savedSoFar = currentIncome - currentExpense;
+
+          final overviewPct = currentIncome > 0
+              ? (currentExpense / currentIncome).clamp(0.0, 1.0)
+              : 0.0;
+          final overviewTrend = prevExpense > 0
+              ? "${((currentExpense - prevExpense) / prevExpense * 100).toStringAsFixed(0)}% vs last month"
+              : "0% vs last month";
 
           return CustomScrollView(
             slivers: [
@@ -1171,11 +1189,10 @@ class _StatsTabState extends State<StatsTab> {
                 ),
               ),
 
-              // === SAVINGS GOAL ===
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                  child: _buildSavingsGoalCard(5000, 3200, isDark),
+                  child: _buildSavingsGoalCard(savingsGoal, savedSoFar, isDark),
                 ),
               ),
 
@@ -1205,15 +1222,15 @@ class _StatsTabState extends State<StatsTab> {
                                   children: [
                                     _buildGridInfoCard(
                                       "This Month Income",
-                                      "₹${totalReceived.toInt()}",
-                                      "+ 38%",
+                                      "₹${currentIncome.toInt()}",
+                                      incomeTrend,
                                       const Color(0xFF00E5A0).withOpacity(0.2),
                                       isDark,
                                     ),
                                     const SizedBox(width: 12),
                                     _buildGridInfoCard(
                                       "Avg. Monthly Income",
-                                      "₹11,466",
+                                      "₹${avgIncome.toInt()}",
                                       null,
                                       isDark
                                           ? AppColors.darkCard
@@ -1227,8 +1244,8 @@ class _StatsTabState extends State<StatsTab> {
                                   children: [
                                     _buildGridInfoCard(
                                       "This Month Expense",
-                                      "₹${totalSpent.toInt()}",
-                                      null,
+                                      "₹${currentExpense.toInt()}",
+                                      expenseTrend,
                                       isDark
                                           ? AppColors.darkCard
                                           : Colors.white,
@@ -1237,7 +1254,7 @@ class _StatsTabState extends State<StatsTab> {
                                     const SizedBox(width: 12),
                                     _buildGridInfoCard(
                                       "Avg. Monthly Expense",
-                                      "₹6,545",
+                                      "₹${avgExpense.toInt()}",
                                       null,
                                       isDark
                                           ? AppColors.darkCard
@@ -1254,9 +1271,11 @@ class _StatsTabState extends State<StatsTab> {
                       const SizedBox(height: 20),
                       // Bottom: Balance Overview & Full Report
                       _buildBottomBalanceSection(
-                        totalReceived - totalSpent,
-                        totalReceived,
-                        totalSpent,
+                        currentIncome - currentExpense,
+                        currentIncome,
+                        currentExpense,
+                        overviewPct,
+                        overviewTrend,
                         isDark,
                       ),
                       const SizedBox(height: 30),
@@ -2115,6 +2134,8 @@ class _StatsTabState extends State<StatsTab> {
     double balance,
     double income,
     double expense,
+    double percentage,
+    String trend,
     bool isDark,
   ) {
     return Container(
@@ -2178,7 +2199,7 @@ class _StatsTabState extends State<StatsTab> {
                         width: 80,
                         height: 80,
                         child: CircularProgressIndicator(
-                          value: 0.67,
+                          value: percentage,
                           strokeWidth: 8,
                           backgroundColor: Colors.white10,
                           valueColor: const AlwaysStoppedAnimation(
@@ -2187,7 +2208,7 @@ class _StatsTabState extends State<StatsTab> {
                         ),
                       ),
                       Text(
-                        "67%",
+                        "${(percentage * 100).toInt()}%",
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontSize: 18,
@@ -2210,7 +2231,7 @@ class _StatsTabState extends State<StatsTab> {
               ),
               const SizedBox(width: 4),
               Text(
-                "36% vs last month",
+                trend,
                 style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
               ),
             ],
@@ -2385,8 +2406,9 @@ class _StatsTabState extends State<StatsTab> {
 
     return Column(
       children: spending.entries.map((entry) {
+        final spendingValue = entry.value.abs();
         final limit = budget?.getLimitForCategory(entry.key) ?? 3000.0;
-        final progress = (entry.value / limit).clamp(0.0, 1.0);
+        final progress = (spendingValue / limit).clamp(0.0, 1.0);
         final color = _catColor(entry.key);
         final isOver = progress > 0.9;
         final catName =
@@ -2423,7 +2445,7 @@ class _StatsTabState extends State<StatsTab> {
                   Row(
                     children: [
                       Text(
-                        "₹${entry.value.toInt()}",
+                        "₹${spendingValue.toInt()}",
                         style: GoogleFonts.poppins(
                           color: isOver ? Colors.red : color,
                           fontWeight: FontWeight.bold,
@@ -2582,7 +2604,7 @@ class _StatsTabState extends State<StatsTab> {
                     hintText: "0",
                     hintStyle: GoogleFonts.poppins(
                       fontSize: 22,
-                      color: Colors.grey.withValues(alpha: 0.4),
+                      color: Colors.grey.withOpacity(0.4),
                     ),
                     filled: true,
                     fillColor: color.withOpacity(0.06),
@@ -2746,7 +2768,7 @@ class _StatsTabState extends State<StatsTab> {
     return InteractiveScale(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const BudgetBotScreen()),
+        MaterialPageRoute(builder: (_) => const ExpensyaChatbotScreen()),
       ),
       child: Container(
         padding: const EdgeInsets.all(20),

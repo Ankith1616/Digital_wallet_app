@@ -3,11 +3,16 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 import '../utils/theme_manager.dart';
+import '../utils/transaction_manager.dart';
 import '../utils/auth_manager.dart';
+import '../models/transaction.dart';
+import '../utils/firestore_service.dart';
+import '../widgets/payment_confirmation_sheet.dart';
 import 'pin_screen.dart';
 import 'send_money_screen.dart';
 import 'wallet_screen.dart';
 import '../widgets/payment_result_dialog.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ScannerTab extends StatefulWidget {
   const ScannerTab({super.key});
@@ -80,6 +85,7 @@ class _ScannerTabState extends State<ScannerTab> {
   void _showScanResult(String data) {
     final amountController = TextEditingController();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final name = _getPayeeName(data); // Define name here for transaction title
 
     showModalBottomSheet(
       context: context,
@@ -162,7 +168,7 @@ class _ScannerTabState extends State<ScannerTab> {
                             ),
                           ),
                           Text(
-                            _getPayeeName(data),
+                            name,
                             style: GoogleFonts.poppins(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -219,19 +225,99 @@ class _ScannerTabState extends State<ScannerTab> {
                 height: 52,
                 child: ElevatedButton(
                   onPressed: () async {
-                    // PIN Verification
-                    final auth = AuthService();
-                    final hasPin = await auth.hasPin();
-                    if (ctx.mounted) {
-                      final mode = hasPin ? PinMode.verify : PinMode.create;
-                      final verified = await Navigator.push(
-                        ctx,
-                        MaterialPageRoute(
-                          builder: (_) => PinScreen(mode: mode),
+                    final amount = amountController.text.trim();
+                    final amountDouble = double.tryParse(amount);
+                    if (amount.isEmpty || amountDouble == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Please enter a valid amount',
+                            style: GoogleFonts.spaceGrotesk(),
+                          ),
+                          backgroundColor: AppColors.error,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       );
-                      if (verified != true) return;
+                      return;
                     }
+
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user == null) return;
+
+                    // ─── Unified Multi-Step Payment Process ────────────────
+                    // 1. Show Confirmation Sheet (Rewards + Bank + Auth Choice)
+                    final confirmation = await PaymentConfirmationSheet.show(
+                      ctx,
+                      user.uid,
+                      amountDouble,
+                    );
+
+                    if (confirmation == null)
+                      return; // Cancelled or Limit Failure inside sheet
+
+                    if (!ctx.mounted) return;
+
+                    // 2. Authentication Verification
+                    bool verified = false;
+                    final auth = AuthService();
+                    final selectedBank = confirmation.bankAccount;
+
+                    if (confirmation.useInstantPay) {
+                      if (auth.canProcessInstantPay(amountDouble)) {
+                        verified = true;
+                        await auth.recordInstantPayUsage(amountDouble);
+                      } else {
+                        // Explicitly fail as per user request
+                        Navigator.pop(ctx);
+                        _showPaymentSuccess(
+                          amount,
+                          "FAILED: Limit Exceeded",
+                        ); // Re-using dialog for simplicity
+                        return;
+                      }
+                    } else if (confirmation.useBiometric) {
+                      verified = await auth.authenticateBiometrics();
+                    } else {
+                      // Default: PIN Verification
+                      final result = await Navigator.push(
+                        ctx,
+                        MaterialPageRoute(
+                          builder: (_) => PinScreen(
+                            mode: PinMode.verifyBank,
+                            expectedBankPinHash: selectedBank.pinHash,
+                          ),
+                        ),
+                      );
+                      verified = result == true;
+                    }
+
+                    if (!verified) return;
+                    if (!ctx.mounted) return;
+
+                    // 3. Deduct balance from the specific bank account
+                    await FirestoreService().updateBankAccountBalance(
+                      user.uid,
+                      selectedBank.id,
+                      -amountDouble,
+                    );
+
+                    TransactionManager().addTransaction(
+                      Transaction(
+                        id: DateTime.now().millisecondsSinceEpoch.toString(),
+                        title: 'Paid to $name',
+                        date: DateTime.now(),
+                        amount: amountDouble,
+                        isPositive: false,
+                        icon: Icons.person,
+                        color: AppColors.primary,
+                        details: confirmation.applyRewards
+                            ? "Rewards Applied"
+                            : "UPI Payment",
+                      ),
+                    );
 
                     if (!ctx.mounted) return;
 

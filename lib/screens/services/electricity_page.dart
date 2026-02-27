@@ -40,3 +40,4 @@ class ElectricityPage extends StatelessWidget {
     );
   }
 }
+

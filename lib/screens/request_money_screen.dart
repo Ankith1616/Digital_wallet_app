@@ -51,7 +51,7 @@ class _RequestMoneyScreenState extends State<RequestMoneyScreen> {
                 color: isDark ? AppColors.darkCard : Colors.grey[50],
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.2),
+                  color: AppColors.primary.withOpacity(0.2),
                 ),
               ),
               child: TextField(
@@ -126,7 +126,7 @@ class _RequestMoneyScreenState extends State<RequestMoneyScreen> {
                                   child: CircleAvatar(
                                     radius: 26,
                                     backgroundColor: AppColors.primary
-                                        .withValues(alpha: 0.1),
+                                        .withOpacity(0.1),
                                     child: Text(
                                       _contacts[index][0],
                                       style: GoogleFonts.poppins(
@@ -227,3 +227,4 @@ class _RequestMoneyScreenState extends State<RequestMoneyScreen> {
     );
   }
 }
+

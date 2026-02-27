@@ -34,3 +34,4 @@ class InsurancePage extends StatelessWidget {
     );
   }
 }
+

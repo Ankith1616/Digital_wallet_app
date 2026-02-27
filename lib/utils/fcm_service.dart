@@ -57,3 +57,4 @@ class FcmService {
   /// to show in-app banners when a notification arrives
   Stream<RemoteMessage> get foregroundMessages => FirebaseMessaging.onMessage;
 }
+

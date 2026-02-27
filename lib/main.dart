@@ -10,14 +10,19 @@ import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/scanner_screen.dart';
 import 'screens/transaction_history_screen.dart';
-import 'screens/wallet_screen.dart';
+import 'screens/budget_bot_screen.dart';
 import 'utils/theme_manager.dart';
 import 'utils/fcm_service.dart';
+import 'utils/locale_manager.dart';
+import 'utils/auth_manager.dart';
+import 'utils/localization_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FcmService.registerBackgroundHandler();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await LocaleManager().init();
+  await AuthService().init();
   runApp(const DigitalWalletApp());
 }
 
@@ -29,24 +34,30 @@ class DigitalWalletApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemeManager().themeMode,
       builder: (context, mode, child) {
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'Digital Wallet',
-          theme: AppThemes.lightTheme,
-          darkTheme: AppThemes.darkTheme,
-          themeMode: mode,
-          home: StreamBuilder<User?>(
-            stream: FirebaseAuth.instance.authStateChanges(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (snapshot.hasData) return const MainLayout();
-              return const LoginScreen();
-            },
-          ),
+        return ValueListenableBuilder<Locale>(
+          valueListenable: LocaleManager().locale,
+          builder: (context, locale, child) {
+            return MaterialApp(
+              debugShowCheckedModeBanner: false,
+              title: 'Digital Wallet',
+              theme: AppThemes.lightTheme,
+              darkTheme: AppThemes.darkTheme,
+              themeMode: mode,
+              locale: locale,
+              home: StreamBuilder<User?>(
+                stream: FirebaseAuth.instance.authStateChanges(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  if (snapshot.hasData) return const MainLayout();
+                  return const LoginScreen();
+                },
+              ),
+            );
+          },
         );
       },
     );
@@ -69,7 +80,7 @@ class _MainLayoutState extends State<MainLayout> {
     const StatsTab(),
     const ScannerTab(),
     const TransactionHistoryScreen(showAppBar: false),
-    const WalletScreen(),
+    const ExpensyaChatbotScreen(),
   ];
 
   @override
@@ -105,8 +116,8 @@ class _MainLayoutState extends State<MainLayout> {
           boxShadow: [
             BoxShadow(
               color: isDark
-                  ? AppColors.primary.withValues(alpha: 0.06)
-                  : Colors.black.withValues(alpha: 0.07),
+                  ? AppColors.primary.withOpacity(0.06)
+                  : Colors.black.withOpacity(0.07),
               blurRadius: 24,
               offset: const Offset(0, -4),
             ),
@@ -126,15 +137,11 @@ class _MainLayoutState extends State<MainLayout> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(Icons.home_rounded, 'Home', 0),
-                _buildNavItem(Icons.auto_graph_rounded, 'Insights', 1),
+                _buildNavItem(Icons.home_rounded, L10n.s('home'), 0),
+                _buildNavItem(Icons.auto_graph_rounded, L10n.s('insights'), 1),
                 _buildScanButton(),
-                _buildNavItem(Icons.receipt_long_rounded, 'History', 3),
-                _buildNavItem(
-                  Icons.account_balance_wallet_rounded,
-                  'My Money',
-                  4,
-                ),
+                _buildNavItem(Icons.receipt_long_rounded, L10n.s('history'), 3),
+                _buildNavItem(Icons.chat_bubble_rounded, L10n.s('chatbot'), 4),
               ],
             ),
           ),

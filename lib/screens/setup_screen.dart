@@ -13,6 +13,7 @@ class SetupScreen extends StatefulWidget {
 class _SetupScreenState extends State<SetupScreen> {
   double _instantLimit = 500.0;
   bool _biometricEnabled = false;
+  bool _instantPayEnabled = false;
   final AuthService _auth = AuthService();
 
   @override
@@ -25,13 +26,15 @@ class _SetupScreenState extends State<SetupScreen> {
     await _auth.init();
     setState(() {
       _biometricEnabled = _auth.isBiometricEnabled;
-      // Mocking limit load for now, could use storage if needed
+      _instantPayEnabled = _auth.isInstantPayEnabled;
+      _instantLimit = _auth.instantLimit;
     });
   }
 
   Future<void> _saveSettings() async {
     await _auth.toggleBiometric(_biometricEnabled);
-    // Mocking limit save
+    await _auth.toggleInstantPay(_instantPayEnabled);
+    await _auth.setInstantLimit(_instantLimit);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -71,6 +74,17 @@ class _SetupScreenState extends State<SetupScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _sectionHeader("Payment Security"),
+            _settingTile(
+              icon: Icons.bolt,
+              title: "Enable Instant Pay",
+              subtitle: "Process small payments without PIN",
+              trailing: Switch(
+                value: _instantPayEnabled,
+                activeColor: AppColors.primary,
+                onChanged: (val) => setState(() => _instantPayEnabled = val),
+              ),
+            ),
+            const SizedBox(height: 16),
             _settingTile(
               icon: Icons.fingerprint,
               title: "Biometric Pay",
@@ -129,7 +143,7 @@ class _SetupScreenState extends State<SetupScreen> {
                       activeTrackColor: AppColors.primary,
                       inactiveTrackColor: Colors.white12,
                       thumbColor: Colors.white,
-                      overlayColor: AppColors.primary.withValues(alpha: 0.2),
+                      overlayColor: AppColors.primary.withOpacity(0.2),
                     ),
                     child: Slider(
                       value: _instantLimit,
@@ -152,6 +166,89 @@ class _SetupScreenState extends State<SetupScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 24),
+                  const Divider(color: Colors.white10),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Daily Security Limit",
+                            style: GoogleFonts.spaceGrotesk(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            "Cumulative daily cap",
+                            style: GoogleFonts.spaceGrotesk(
+                              color: Colors.grey,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        "₹2,000",
+                        style: GoogleFonts.spaceGrotesk(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Today's Usage",
+                              style: GoogleFonts.spaceGrotesk(
+                                color: Colors.grey[400],
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              "₹${_auth.instantDailyUsage.toStringAsFixed(0)} / ₹2,000",
+                              style: GoogleFonts.spaceGrotesk(
+                                color: AppColors.primary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: _auth.instantDailyUsage / 2000,
+                            backgroundColor: Colors.white10,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              _auth.instantDailyUsage >= 2000
+                                  ? Colors.red
+                                  : AppColors.primary,
+                            ),
+                            minHeight: 6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -168,7 +265,7 @@ class _SetupScreenState extends State<SetupScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   elevation: 8,
-                  shadowColor: AppColors.primary.withValues(alpha: 0.4),
+                  shadowColor: AppColors.primary.withOpacity(0.4),
                 ),
                 child: Text(
                   "Save Changes",
@@ -218,7 +315,7 @@ class _SetupScreenState extends State<SetupScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
+              color: AppColors.primary.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: AppColors.primary, size: 24),

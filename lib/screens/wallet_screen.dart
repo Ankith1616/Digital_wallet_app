@@ -4,13 +4,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/theme_manager.dart';
 import '../utils/firestore_service.dart';
 import '../models/bank_account.dart';
+import 'setup_screen.dart';
+import '../utils/auth_manager.dart';
 
-class WalletScreen extends StatelessWidget {
+class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
 
   @override
+  State<WalletScreen> createState() => _WalletScreenState();
+}
+
+class _WalletScreenState extends State<WalletScreen> {
+  @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
@@ -106,14 +112,23 @@ class WalletScreen extends StatelessWidget {
             _listTile(
               context,
               title: "Instant Pay",
-              subtitle: "Pin-less payments up to ₹1,000",
+              subtitle:
+                  "Pin-less payments up to ₹${AuthService().instantLimit.toStringAsFixed(0)}",
               leading: const Icon(Icons.bolt, color: Colors.white, size: 32),
               trailing: TextButton(
-                onPressed: () {},
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SetupScreen()),
+                  );
+                  if (mounted) setState(() {});
+                },
                 child: Text(
-                  "Try Now",
+                  AuthService().isInstantPayEnabled ? "Enabled" : "Try Now",
                   style: GoogleFonts.spaceGrotesk(
-                    color: Colors.deepPurpleAccent,
+                    color: AuthService().isInstantPayEnabled
+                        ? AppColors.primary
+                        : Colors.deepPurpleAccent,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -138,22 +153,6 @@ class WalletScreen extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
-            const Divider(color: Colors.white12, indent: 80),
-            _listTile(
-              context,
-              title: "Add UPI account",
-              subtitle: "RuPay card, bank account & more",
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-                child: const Icon(Icons.add, color: Colors.white, size: 24),
-              ),
-              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-              onTap: () => _showAddAccountDialog(context, isDark),
             ),
           ],
         ),
@@ -352,149 +351,6 @@ class WalletScreen extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: Center(child: Icon(icon, color: color, size: 28)),
-    );
-  }
-
-  void _showAddAccountDialog(BuildContext context, bool isDark) {
-    final bankNameCtrl = TextEditingController();
-    final accNumCtrl = TextEditingController();
-    final ifscCtrl = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            24,
-            24,
-            24,
-            24 + MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                "Link New Bank Account",
-                style: GoogleFonts.spaceGrotesk(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(ctx).textTheme.bodyLarge?.color,
-                ),
-              ),
-              const SizedBox(height: 20),
-              _dialogField(ctx, "Bank Name", bankNameCtrl, isDark),
-              const SizedBox(height: 12),
-              _dialogField(
-                ctx,
-                "Account Number",
-                accNumCtrl,
-                isDark,
-                isNumber: true,
-              ),
-              const SizedBox(height: 12),
-              _dialogField(ctx, "IFSC Code", ifscCtrl, isDark),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (bankNameCtrl.text.isEmpty) return;
-
-                    final user = FirebaseAuth.instance.currentUser;
-                    if (user == null) return;
-
-                    final newBank = BankAccount(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      bankName: bankNameCtrl.text,
-                      accountNumber: accNumCtrl.text,
-                      ifscCode: ifscCtrl.text,
-                      balance: 0.0,
-                      icon: Icons.account_balance,
-                      color: Colors.blue,
-                    );
-
-                    await FirestoreService().addBankAccount(user.uid, newBank);
-
-                    if (context.mounted) Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Bank account linked successfully!"),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    "Link Account",
-                    style: GoogleFonts.spaceGrotesk(
-                      fontSize: 15,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _dialogField(
-    BuildContext context,
-    String hint,
-    TextEditingController controller,
-    bool isDark, {
-    bool isNumber = false,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-        ),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-        style: GoogleFonts.spaceGrotesk(
-          fontSize: 14,
-          color: Theme.of(context).textTheme.bodyLarge?.color,
-        ),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: GoogleFonts.spaceGrotesk(color: Colors.grey[400]),
-          border: InputBorder.none,
-        ),
-      ),
     );
   }
 }

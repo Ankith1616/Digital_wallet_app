@@ -84,3 +84,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'digital-wallet-and-tracker.firebasestorage.app',
   );
 }
+

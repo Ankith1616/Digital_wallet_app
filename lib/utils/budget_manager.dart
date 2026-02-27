@@ -85,3 +85,4 @@ class BudgetManager extends ChangeNotifier {
 
   bool get hasData => _budgetData != null;
 }
+

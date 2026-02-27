@@ -35,3 +35,4 @@ class MutualFundsPage extends StatelessWidget {
     );
   }
 }
+

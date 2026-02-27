@@ -6,6 +6,9 @@ import '../models/transaction.dart';
 import '../utils/auth_manager.dart';
 import 'pin_screen.dart';
 import '../widgets/interactive_scale.dart';
+import '../widgets/payment_confirmation_sheet.dart';
+import '../utils/firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SplitBillScreen extends StatefulWidget {
   final double? initialAmount;
@@ -55,7 +58,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
+                    color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -95,9 +98,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                       color: isDark ? AppColors.darkCard : Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: Theme.of(
-                          context,
-                        ).dividerColor.withValues(alpha: 0.08),
+                        color: Theme.of(context).dividerColor.withOpacity(0.08),
                       ),
                     ),
                     child: Row(
@@ -142,9 +143,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                       color: isDark ? AppColors.darkCard : Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: Theme.of(
-                          context,
-                        ).dividerColor.withValues(alpha: 0.08),
+                        color: Theme.of(context).dividerColor.withOpacity(0.08),
                       ),
                     ),
                     child: TextField(
@@ -204,7 +203,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                                   ? AppColors.primary
                                   : Theme.of(
                                       context,
-                                    ).dividerColor.withValues(alpha: 0.08),
+                                    ).dividerColor.withOpacity(0.08),
                               width: isSelected ? 1.5 : 1,
                             ),
                           ),
@@ -213,7 +212,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                               CircleAvatar(
                                 radius: 20,
                                 backgroundColor: (contact['color'] as Color)
-                                    .withValues(alpha: 0.15),
+                                    .withOpacity(0.15),
                                 child: Text(
                                   (contact['name'] as String)[0],
                                   style: GoogleFonts.poppins(
@@ -271,7 +270,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
               color: isDark ? AppColors.darkSurface : Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: Colors.black.withOpacity(0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -4),
                 ),
@@ -326,7 +325,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                             if (!(_amountController.text.isEmpty ||
                                 _selectedContactIndices.isEmpty))
                               BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.3),
+                                color: AppColors.primary.withOpacity(0.3),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),
@@ -358,22 +357,75 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
   }
 
   Future<void> _handleSplit() async {
-    final auth = AuthService();
-    bool hasPin = await auth.hasPin();
+    final amount = double.tryParse(_amountController.text) ?? 0.0;
 
-    if (mounted && hasPin) {
-      final verified = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const PinScreen(mode: PinMode.verify),
-        ),
-      );
-      if (verified != true) return;
-    }
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final auth = AuthService();
+
+    // ─── Unified Multi-Step Payment Process ────────────────
+    // 1. Show Confirmation Sheet (Rewards + Bank + Auth Choice)
+    final confirmation = await PaymentConfirmationSheet.show(
+      context,
+      user.uid,
+      amount,
+    );
+
+    if (confirmation == null) return; // Cancelled or Limit Failure inside sheet
 
     if (!mounted) return;
 
-    final amount = double.tryParse(_amountController.text) ?? 0;
+    // 2. Authentication Verification
+    bool verified = false;
+    final selectedBank = confirmation.bankAccount;
+
+    if (confirmation.useInstantPay) {
+      if (auth.canProcessInstantPay(amount)) {
+        verified = true;
+        await auth.recordInstantPayUsage(amount);
+      } else {
+        // Explicitly fail as per user request
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Instant Payment limit exceeded. Cumulative daily limit is ₹2000.',
+            ),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        return;
+      }
+    } else if (confirmation.useBiometric) {
+      verified = await auth.authenticateBiometrics();
+    } else {
+      // Default: PIN Verification
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PinScreen(
+            mode: PinMode.verifyBank,
+            expectedBankPinHash: selectedBank.pinHash,
+          ),
+        ),
+      );
+      verified = result == true;
+    }
+
+    if (!verified) return;
+    if (!mounted) return;
+
+    // 3. Deduct balance from the specific bank account
+    await FirestoreService().updateBankAccountBalance(
+      user.uid,
+      selectedBank.id,
+      -amount,
+    );
+
+    if (!verified) return;
+
+    if (!mounted) return;
+
     final perPerson = _calculatePerPerson();
     final note = _noteController.text.isEmpty
         ? "Split Expense"

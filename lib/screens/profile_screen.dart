@@ -7,11 +7,13 @@ import 'personal_info_screen.dart';
 import 'bank_accounts_screen.dart';
 import 'notifications_settings_screen.dart';
 import 'privacy_security_screen.dart';
-import 'wallet_screen.dart';
 import 'theme_selection_screen.dart';
 import 'help_support_screen.dart';
 import 'about_screen.dart';
+import 'autopay_management_screen.dart';
 import '../widgets/interactive_scale.dart';
+import '../utils/locale_manager.dart';
+import '../utils/localization_helper.dart';
 
 // Used for direct navigation (Push)
 class ProfileScreen extends StatelessWidget {
@@ -51,7 +53,7 @@ class ProfileTab extends StatelessWidget {
           children: [
             if (isNested) ...[
               Text(
-                "My Money",
+                L10n.s('my_money'),
                 style: GoogleFonts.spaceGrotesk(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -79,7 +81,7 @@ class ProfileTab extends StatelessWidget {
                     gradient: AppColors.headerGradient,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.25),
+                      color: AppColors.primary.withOpacity(0.25),
                       width: 1,
                     ),
                   ),
@@ -93,7 +95,7 @@ class ProfileTab extends StatelessWidget {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.4),
+                              color: AppColors.primary.withOpacity(0.4),
                               blurRadius: 12,
                             ),
                           ],
@@ -170,20 +172,20 @@ class ProfileTab extends StatelessWidget {
             const SizedBox(height: 24),
 
             // == Payment Settings ==
-            _sectionHeader("Payment Settings"),
+            _sectionHeader(L10n.s("payment_settings")),
             const SizedBox(height: 8),
             _settingsTile(
               context,
-              Icons.credit_card_rounded,
-              "My Cards",
+              Icons.autorenew_rounded,
+              L10n.s("autopay_management"),
               const Color(0xFF00D4FF), // electric cyan
-              const WalletScreen(),
+              const AutopayManagementScreen(),
               isDark,
             ),
             _settingsTile(
               context,
               Icons.account_balance_rounded,
-              "Bank Accounts",
+              L10n.s("bank_accounts"),
               const Color(0xFFFFD166), // gold
               const BankAccountsScreen(),
               isDark,
@@ -191,7 +193,7 @@ class ProfileTab extends StatelessWidget {
             _settingsTile(
               context,
               Icons.person_pin_rounded,
-              "Personal Info",
+              L10n.s("personal_info"),
               const Color(0xFF00E5A0), // teal neon
               const PersonalInfoScreen(),
               isDark,
@@ -200,12 +202,12 @@ class ProfileTab extends StatelessWidget {
             const SizedBox(height: 20),
 
             // == App Settings ==
-            _sectionHeader("App Settings"),
+            _sectionHeader(L10n.s("app_settings")),
             const SizedBox(height: 8),
             _settingsTile(
               context,
               Icons.notifications_rounded,
-              "Notifications",
+              L10n.s("notifications"),
               const Color(0xFFFF8C42), // amber
               const NotificationsSettingsScreen(),
               isDark,
@@ -213,7 +215,7 @@ class ProfileTab extends StatelessWidget {
             _settingsTile(
               context,
               Icons.shield_rounded,
-              "Privacy & Security",
+              L10n.s("privacy_security"),
               const Color(0xFFFF4F6D), // coral
               const PrivacySecurityScreen(),
               isDark,
@@ -221,7 +223,7 @@ class ProfileTab extends StatelessWidget {
             _settingsTile(
               context,
               Icons.palette_rounded,
-              "Theme",
+              L10n.s("theme"),
               const Color(0xFF7B2FBE), // nebula purple
               const ThemeSelectionScreen(),
               isDark,
@@ -231,12 +233,12 @@ class ProfileTab extends StatelessWidget {
             const SizedBox(height: 20),
 
             // == More ==
-            _sectionHeader("More"),
+            _sectionHeader(L10n.s("more")),
             const SizedBox(height: 8),
             _settingsTile(
               context,
               Icons.headset_mic_rounded,
-              "Help & Support",
+              L10n.s("help_support"),
               const Color(0xFF6EE9FF), // light cyan
               const HelpSupportScreen(),
               isDark,
@@ -244,7 +246,7 @@ class ProfileTab extends StatelessWidget {
             _settingsTile(
               context,
               Icons.info_rounded,
-              "About",
+              L10n.s("about"),
               const Color(0xFF8B6F4E), // warm brown
               const AboutScreen(),
               isDark,
@@ -266,21 +268,19 @@ class ProfileTab extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.error.withValues(alpha: 0.12),
-                      AppColors.error.withValues(alpha: 0.06),
+                      AppColors.error.withOpacity(0.12),
+                      AppColors.error.withOpacity(0.06),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: AppColors.error.withValues(alpha: 0.25),
-                  ),
+                  border: Border.all(color: AppColors.error.withOpacity(0.25)),
                 ),
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withValues(alpha: 0.12),
+                      color: AppColors.error.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
@@ -290,7 +290,7 @@ class ProfileTab extends StatelessWidget {
                     ),
                   ),
                   title: Text(
-                    "Logout",
+                    L10n.s("logout"),
                     style: GoogleFonts.spaceGrotesk(
                       color: AppColors.error,
                       fontWeight: FontWeight.w700,
@@ -316,7 +316,7 @@ class ProfileTab extends StatelessWidget {
         style: GoogleFonts.spaceGrotesk(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: AppColors.primary.withValues(alpha: 0.7),
+          color: AppColors.primary.withOpacity(0.7),
           letterSpacing: 1.5,
         ),
       ),
@@ -349,8 +349,8 @@ class ProfileTab extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isDark
-                ? AppColors.darkBorder.withValues(alpha: 0.4)
-                : Colors.black.withValues(alpha: 0.04),
+                ? AppColors.darkBorder.withOpacity(0.4)
+                : Colors.black.withOpacity(0.04),
           ),
         ),
         child: ListTile(
@@ -359,7 +359,7 @@ class ProfileTab extends StatelessWidget {
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.12),
+              color: iconColor.withOpacity(0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: iconColor, size: 20),
@@ -393,8 +393,8 @@ class ProfileTab extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isDark
-                ? AppColors.darkBorder.withValues(alpha: 0.4)
-                : Colors.black.withValues(alpha: 0.04),
+                ? AppColors.darkBorder.withOpacity(0.4)
+                : Colors.black.withOpacity(0.04),
           ),
         ),
         child: ListTile(
@@ -403,7 +403,7 @@ class ProfileTab extends StatelessWidget {
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
+              color: const Color(0xFF7B2FBE).withOpacity(0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
@@ -413,7 +413,7 @@ class ProfileTab extends StatelessWidget {
             ),
           ),
           title: Text(
-            "Language",
+            L10n.s("language"),
             style: GoogleFonts.spaceGrotesk(
               fontWeight: FontWeight.w600,
               fontSize: 14,
@@ -424,7 +424,7 @@ class ProfileTab extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                "English",
+                LocaleManager().languageName,
                 style: GoogleFonts.spaceGrotesk(
                   color: Colors.grey,
                   fontSize: 12,
@@ -444,27 +444,11 @@ class ProfileTab extends StatelessWidget {
 
   void _showLanguageDialog(BuildContext context, bool isDark) {
     final languages = [
-      {"name": "English", "code": "en", "selected": true},
-      {
-        "name": "\u0939\u093f\u0902\u0926\u0940",
-        "code": "hi",
-        "selected": false,
-      },
-      {
-        "name": "\u0c24\u0c46\u0c32\u0c41\u0c17\u0c41",
-        "code": "te",
-        "selected": false,
-      },
-      {
-        "name": "\u0ba4\u0bae\u0bbf\u0bb4\u0bcd",
-        "code": "ta",
-        "selected": false,
-      },
-      {
-        "name": "\u0c95\u0ca8\u0ccd\u0ca8\u0ca1",
-        "code": "kn",
-        "selected": false,
-      },
+      {"name": "English", "code": "en"},
+      {"name": "\u0939\u093f\u0902\u0926\u0940", "code": "hi"},
+      {"name": "\u0c24\u0c46\u0c32\u0c41\u0c17\u0c41", "code": "te"},
+      {"name": "\u0ba4\u0bae\u0bbf\u0bb4\u0bcd", "code": "ta"},
+      {"name": "\u0c95\u0ca8\u0ccd\u0ca8\u0ca1", "code": "kn"},
     ];
 
     showModalBottomSheet(
@@ -492,7 +476,7 @@ class ProfileTab extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                "Select Language",
+                L10n.s("select_language"),
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -500,8 +484,10 @@ class ProfileTab extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              ...languages.map(
-                (lang) => ListTile(
+              ...languages.map((lang) {
+                final isSelected =
+                    LocaleManager().locale.value.languageCode == lang["code"];
+                return ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(
                     lang["name"] as String,
@@ -510,7 +496,7 @@ class ProfileTab extends StatelessWidget {
                       color: Theme.of(ctx).textTheme.bodyLarge?.color,
                     ),
                   ),
-                  trailing: lang["selected"] as bool
+                  trailing: isSelected
                       ? Container(
                           padding: const EdgeInsets.all(4),
                           decoration: const BoxDecoration(
@@ -524,16 +510,21 @@ class ProfileTab extends StatelessWidget {
                           ),
                         )
                       : null,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Language set to ${lang["name"]}"),
-                      ),
-                    );
+                  onTap: () async {
+                    await LocaleManager().setLocale(lang["code"] as String);
+                    if (context.mounted) {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            "${L10n.s("language_set_to")} ${lang["name"]}",
+                          ),
+                        ),
+                      );
+                    }
                   },
-                ),
-              ),
+                );
+              }),
             ],
           ),
         );

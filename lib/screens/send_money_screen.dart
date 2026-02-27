@@ -6,9 +6,12 @@ import 'package:permission_handler/permission_handler.dart';
 import '../utils/theme_manager.dart';
 import '../utils/transaction_manager.dart';
 import '../models/transaction.dart';
-import '../utils/auth_manager.dart';
+import '../utils/firestore_service.dart';
+import '../widgets/payment_confirmation_sheet.dart';
 import 'pin_screen.dart';
 import '../widgets/payment_result_dialog.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/auth_manager.dart';
 
 // ─── Colour palette for avatars ────────────────────────────────────────────
 const List<Color> _avatarColors = [
@@ -124,7 +127,6 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -232,7 +234,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                           width: 36,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.35),
+                            color: Colors.white.withOpacity(0.35),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -245,7 +247,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.4),
+                                color: AppColors.primary.withOpacity(0.4),
                                 blurRadius: 16,
                               ),
                             ],
@@ -297,11 +299,11 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                         Container(
                           decoration: BoxDecoration(
                             color: isDark
-                                ? Colors.white.withValues(alpha: 0.06)
+                                ? Colors.white.withOpacity(0.06)
                                 : Colors.grey.shade50,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.25),
+                              color: AppColors.primary.withOpacity(0.25),
                               width: 1.5,
                             ),
                           ),
@@ -375,17 +377,13 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                                   color: sel
                                       ? AppColors.primary
                                       : (isDark
-                                            ? Colors.white.withValues(
-                                                alpha: 0.08,
-                                              )
+                                            ? Colors.white.withOpacity(0.08)
                                             : Colors.grey.shade100),
                                   borderRadius: BorderRadius.circular(20),
                                   border: sel
                                       ? null
                                       : Border.all(
-                                          color: Colors.grey.withValues(
-                                            alpha: 0.2,
-                                          ),
+                                          color: Colors.grey.withOpacity(0.2),
                                         ),
                                 ),
                                 child: Text(
@@ -410,12 +408,12 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                         Container(
                           decoration: BoxDecoration(
                             color: isDark
-                                ? Colors.white.withValues(alpha: 0.06)
+                                ? Colors.white.withOpacity(0.06)
                                 : Colors.grey.shade50,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: Colors.grey.withValues(
-                                alpha: isDark ? 0.15 : 0.12,
+                              color: Colors.grey.withOpacity(
+                                isDark ? 0.15 : 0.12,
                               ),
                             ),
                           ),
@@ -450,8 +448,8 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                         GestureDetector(
                           onTap: () async {
                             final amount = amountCtrl.text.trim();
-                            if (amount.isEmpty ||
-                                double.tryParse(amount) == null) {
+                            final amountDouble = double.tryParse(amount);
+                            if (amount.isEmpty || amountDouble == null) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
@@ -467,20 +465,72 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                               );
                               return;
                             }
+
+                            final user = FirebaseAuth.instance.currentUser;
+                            if (user == null) return;
+
+                            // ─── Unified Multi-Step Payment Process ────────────────
+                            // 1. Show Confirmation Sheet (Rewards + Bank + Auth Choice)
+                            final confirmation =
+                                await PaymentConfirmationSheet.show(
+                                  context,
+                                  user.uid,
+                                  amountDouble,
+                                );
+
+                            if (confirmation == null)
+                              return; // Cancelled or Limit Failure inside sheet
+
+                            if (!context.mounted) return;
+
+                            // 2. Authentication Verification
+                            bool verified = false;
                             final auth = AuthService();
-                            final hasPin = await auth.hasPin();
+                            final selectedBank = confirmation.bankAccount;
+
+                            if (confirmation.useInstantPay) {
+                              // Double check limits (sheet already did it, but good for safety)
+                              if (auth.canProcessInstantPay(amountDouble)) {
+                                verified = true;
+                                await auth.recordInstantPayUsage(amountDouble);
+                              } else {
+                                // Explicitly fail as per user request
+                                await PaymentResultDialog.show(
+                                  context,
+                                  success: false,
+                                  title: 'Transfer Failed',
+                                  subtitle:
+                                      'Instant Payment limit exceeded. Cumulative daily limit is ₹2000.',
+                                  amount: amount,
+                                  recipient: name,
+                                );
+                                return;
+                              }
+                            } else if (confirmation.useBiometric) {
+                              verified = await auth.authenticateBiometrics();
+                            } else {
+                              // Default: PIN Verification
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => PinScreen(
+                                    mode: PinMode.verifyBank,
+                                    expectedBankPinHash: selectedBank.pinHash,
+                                  ),
+                                ),
+                              );
+                              verified = result == true;
+                            }
+
+                            if (!verified) return;
                             if (!context.mounted) return;
-                            final mode = hasPin
-                                ? PinMode.verify
-                                : PinMode.create;
-                            final verified = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PinScreen(mode: mode),
-                              ),
+
+                            // 3. Deduct balance from the specific bank account
+                            await FirestoreService().updateBankAccountBalance(
+                              user.uid,
+                              selectedBank.id,
+                              -amountDouble,
                             );
-                            if (verified != true) return;
-                            if (!context.mounted) return;
 
                             TransactionManager().addTransaction(
                               Transaction(
@@ -488,12 +538,14 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                                     .toString(),
                                 title: 'Sent to $name',
                                 date: DateTime.now(),
-                                amount: double.parse(amount),
+                                amount: amountDouble,
                                 isPositive: false,
                                 icon: Icons.person,
                                 color: AppColors.primary,
                                 details: noteCtrl.text.isEmpty
-                                    ? 'Transfer'
+                                    ? (confirmation.applyRewards
+                                          ? 'Transfer (Rewards Applied)'
+                                          : 'Transfer')
                                     : noteCtrl.text,
                                 category: TransactionCategory.transfer,
                               ),
@@ -518,9 +570,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.4,
-                                  ),
+                                  color: AppColors.primary.withOpacity(0.4),
                                   blurRadius: 16,
                                   offset: const Offset(0, 4),
                                 ),
@@ -620,7 +670,7 @@ class _PermissionPrompt extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.35),
+                    color: AppColors.primary.withOpacity(0.35),
                     blurRadius: 24,
                     spreadRadius: 4,
                   ),
@@ -665,7 +715,7 @@ class _PermissionPrompt extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.35),
+                      color: AppColors.primary.withOpacity(0.35),
                       blurRadius: 14,
                       offset: const Offset(0, 4),
                     ),
@@ -793,7 +843,7 @@ class _ContactsView extends StatelessWidget {
                           width: 52,
                           height: 52,
                           decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.15),
+                            color: color.withOpacity(0.15),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
@@ -848,7 +898,7 @@ class _ContactsView extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
+                  color: AppColors.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -892,14 +942,14 @@ class _ContactsView extends StatelessWidget {
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                             color: isDark
-                                ? Colors.white.withValues(alpha: 0.06)
-                                : Colors.grey.withValues(alpha: 0.1),
+                                ? Colors.white.withOpacity(0.06)
+                                : Colors.grey.withOpacity(0.1),
                           ),
                           boxShadow: isDark
                               ? null
                               : [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.04),
+                                    color: Colors.black.withOpacity(0.04),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -911,7 +961,7 @@ class _ContactsView extends StatelessWidget {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.15),
+                              color: color.withOpacity(0.15),
                               shape: BoxShape.circle,
                             ),
                             child: Center(
@@ -943,7 +993,7 @@ class _ContactsView extends StatelessWidget {
                             width: 34,
                             height: 34,
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
+                              color: AppColors.primary.withOpacity(0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(

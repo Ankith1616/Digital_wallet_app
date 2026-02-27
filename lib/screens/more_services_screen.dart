@@ -209,7 +209,7 @@ class MoreServicesScreen extends StatelessWidget {
             color: isDark ? AppColors.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
+              color: Theme.of(context).dividerColor.withOpacity(0.06),
             ),
           ),
           child: Row(
@@ -244,7 +244,7 @@ class MoreServicesScreen extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(svc['icon'] as IconData, color: color, size: 22),
@@ -266,3 +266,4 @@ class MoreServicesScreen extends StatelessWidget {
     );
   }
 }
+

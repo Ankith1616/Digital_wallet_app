@@ -80,7 +80,7 @@ class ThemeSelectionScreen extends StatelessWidget {
           border: Border.all(
             color: isSelected
                 ? AppColors.primary
-                : Theme.of(context).dividerColor.withValues(alpha: 0.06),
+                : Theme.of(context).dividerColor.withOpacity(0.06),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -90,7 +90,7 @@ class ThemeSelectionScreen extends StatelessWidget {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: (isSelected ? AppColors.primary : Colors.grey)
-                    .withValues(alpha: 0.1),
+                    .withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -127,3 +127,4 @@ class ThemeSelectionScreen extends StatelessWidget {
     );
   }
 }
+

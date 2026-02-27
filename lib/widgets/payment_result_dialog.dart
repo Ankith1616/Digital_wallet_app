@@ -179,7 +179,7 @@ class _PaymentResultDialogState extends State<PaymentResultDialog>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: color.withValues(alpha: 0.45),
+                              color: color.withOpacity(0.45),
                               blurRadius: 24,
                               spreadRadius: 4,
                             ),
@@ -229,9 +229,9 @@ class _PaymentResultDialogState extends State<PaymentResultDialog>
                   vertical: 16,
                 ),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: isDark ? 0.08 : 0.05),
+                  color: color.withOpacity(isDark ? 0.08 : 0.05),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: color.withValues(alpha: 0.2)),
+                  border: Border.all(color: color.withOpacity(0.2)),
                 ),
                 child: Column(
                   children: [
@@ -277,7 +277,7 @@ class _PaymentResultDialogState extends State<PaymentResultDialog>
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                        color: color.withValues(alpha: 0.35),
+                        color: color.withOpacity(0.35),
                         blurRadius: 14,
                         offset: const Offset(0, 4),
                       ),
@@ -565,7 +565,7 @@ class _ParticlePainter extends CustomPainter {
       final opacity = (1 - progress).clamp(0.0, 1.0);
       final x = center.dx + math.cos(angle) * dist;
       final y = center.dy + math.sin(angle) * dist;
-      paint.color = colors[i % colors.length].withValues(alpha: opacity);
+      paint.color = colors[i % colors.length].withOpacity(opacity);
       canvas.drawCircle(Offset(x, y), 3 + rng.nextDouble() * 3, paint);
     }
   }
@@ -573,3 +573,4 @@ class _ParticlePainter extends CustomPainter {
   @override
   bool shouldRepaint(_ParticlePainter old) => old.progress != progress;
 }
+
