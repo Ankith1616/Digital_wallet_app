@@ -6,6 +6,7 @@ import '../utils/firestore_service.dart';
 import '../utils/hash_helper.dart';
 import '../models/bank_account.dart';
 import 'pin_screen.dart';
+import '../utils/localization_helper.dart';
 
 class BankAccountsScreen extends StatelessWidget {
   const BankAccountsScreen({super.key});
@@ -18,7 +19,7 @@ class BankAccountsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Bank Accounts",
+          L10n.s("bank_accounts"),
           style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
@@ -26,7 +27,7 @@ class BankAccountsScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: user == null
-          ? const Center(child: Text("Please login to see bank accounts"))
+          ? Center(child: Text(L10n.s("login_to_see_banks")))
           : StreamBuilder<List<BankAccount>>(
               stream: FirestoreService().linkedBanksStream(user.uid),
               builder: (context, snapshot) {
@@ -53,7 +54,7 @@ class BankAccountsScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  "No bank accounts linked",
+                                  L10n.s("no_banks_linked"),
                                   style: GoogleFonts.poppins(
                                     color: Colors.grey,
                                   ),
@@ -129,7 +130,7 @@ class BankAccountsScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  "Savings  •  **** ${bank.accountNumber.substring(bank.accountNumber.length > 4 ? bank.accountNumber.length - 4 : 0)}",
+                  "${L10n.s("savings")}  •  **** ${bank.accountNumber.substring(bank.accountNumber.length > 4 ? bank.accountNumber.length - 4 : 0)}",
                   style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
                 ),
               ],
@@ -143,7 +144,7 @@ class BankAccountsScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                "Primary",
+                L10n.s("primary"),
                 style: GoogleFonts.poppins(
                   color: AppColors.success,
                   fontSize: 10,
@@ -233,7 +234,7 @@ class BankAccountsScreen extends StatelessWidget {
                     color: AppColors.primary,
                   ),
                   title: Text(
-                    "Set as Primary Account",
+                    L10n.s("set_as_primary"),
                     style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
                   ),
                   onTap: () async {
@@ -244,10 +245,8 @@ class BankAccountsScreen extends StatelessWidget {
                     );
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            "Primary account updated successfully.",
-                          ),
+                        SnackBar(
+                          content: Text(L10n.s("primary_account_updated")),
                           backgroundColor: AppColors.success,
                         ),
                       );
@@ -260,7 +259,7 @@ class BankAccountsScreen extends StatelessWidget {
                   color: AppColors.primary,
                 ),
                 title: Text(
-                  "Change PIN",
+                  L10n.s("change_pin"),
                   style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
                 ),
                 onTap: () async {
@@ -274,7 +273,7 @@ class BankAccountsScreen extends StatelessWidget {
                   color: Colors.redAccent,
                 ),
                 title: Text(
-                  "Delete Account",
+                  L10n.s("delete_account"),
                   style: GoogleFonts.poppins(
                     fontWeight: FontWeight.w500,
                     color: Colors.redAccent,
@@ -297,18 +296,18 @@ class BankAccountsScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(
-          "Remove Account?",
+          L10n.s("remove_account"),
           style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          "Are you sure you want to remove ${bank.bankName} ending in ${bank.accountNumber.substring(bank.accountNumber.length > 4 ? bank.accountNumber.length - 4 : 0)}? You will need your PIN to confirm.",
+          "${L10n.s("sure_remove_part1")} ${bank.bankName} ${L10n.s("ending_in")} ${bank.accountNumber.substring(bank.accountNumber.length > 4 ? bank.accountNumber.length - 4 : 0)}? ${L10n.s("need_pin_to_confirm")}",
           style: GoogleFonts.poppins(color: Colors.grey[600]),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(
-              "Cancel",
+              L10n.s("cancel"),
               style: GoogleFonts.poppins(color: Colors.grey),
             ),
           ),
@@ -334,8 +333,8 @@ class BankAccountsScreen extends StatelessWidget {
                 await FirestoreService().deleteBankAccount(uid, bank.id);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Bank account removed successfully."),
+                    SnackBar(
+                      content: Text(L10n.s("bank_removed_successfully")),
                       backgroundColor: AppColors.success,
                     ),
                   );
@@ -344,7 +343,7 @@ class BankAccountsScreen extends StatelessWidget {
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             child: Text(
-              "Remove",
+              L10n.s("remove"),
               style: GoogleFonts.poppins(color: Colors.white),
             ),
           ),
@@ -393,7 +392,7 @@ class BankAccountsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    "Link New Bank Account",
+                    L10n.s("link_new_bank"),
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -401,17 +400,17 @@ class BankAccountsScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  _dialogField(ctx, "Bank Name", bankNameCtrl, isDark),
+                  _dialogField(ctx, L10n.s("bank_name"), bankNameCtrl, isDark),
                   const SizedBox(height: 12),
                   _dialogField(
                     ctx,
-                    "Account Number",
+                    L10n.s("account_number"),
                     accNumCtrl,
                     isDark,
                     isNumber: true,
                   ),
                   const SizedBox(height: 12),
-                  _dialogField(ctx, "IFSC Code", ifscCtrl, isDark),
+                  _dialogField(ctx, L10n.s("ifsc_code"), ifscCtrl, isDark),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -461,10 +460,8 @@ class BankAccountsScreen extends StatelessWidget {
 
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                "Bank account and PIN linked successfully!",
-                              ),
+                            SnackBar(
+                              content: Text(L10n.s("bank_linked_successfully")),
                               backgroundColor: AppColors.success,
                             ),
                           );
@@ -478,7 +475,7 @@ class BankAccountsScreen extends StatelessWidget {
                         elevation: 0,
                       ),
                       child: Text(
-                        "Link Account",
+                        L10n.s("link_account"),
                         style: GoogleFonts.poppins(
                           fontSize: 15,
                           color: Colors.white,
@@ -509,7 +506,7 @@ class BankAccountsScreen extends StatelessWidget {
             Icon(Icons.add_circle_outline, color: AppColors.primary, size: 22),
             const SizedBox(width: 10),
             Text(
-              "Link New Bank Account",
+              L10n.s("link_new_bank"),
               style: GoogleFonts.poppins(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w600,
@@ -555,8 +552,8 @@ class BankAccountsScreen extends StatelessWidget {
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Bank PIN updated successfully!"),
+            SnackBar(
+              content: Text(L10n.s("bank_pin_updated")),
               backgroundColor: AppColors.success,
             ),
           );

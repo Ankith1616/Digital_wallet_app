@@ -24,7 +24,7 @@ class ProfileScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "My Money",
+          L10n.s('my_profile'),
           style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
@@ -53,7 +53,7 @@ class ProfileTab extends StatelessWidget {
           children: [
             if (isNested) ...[
               Text(
-                L10n.s('my_money'),
+                L10n.s('my_profile'),
                 style: GoogleFonts.spaceGrotesk(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,

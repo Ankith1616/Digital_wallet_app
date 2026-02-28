@@ -39,18 +39,14 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
   }
 
   void _showWelcomeMessage() async {
-    _addBotMessage(
-      "Hi! I'm Expensya, your personal financial assistant. How can I help you today? 🚀",
-    );
+    _addBotMessage(L10n.s("bot_welcome"));
     await Future.delayed(const Duration(milliseconds: 500));
     _showMenu();
   }
 
   void _showMenu() {
     _currentFlow = ChatFlow.menu;
-    _addBotMessage(
-      "Please select an option by tapping it or entering the number below:",
-    );
+    _addBotMessage(L10n.s("bot_select_option"));
 
     final menuWidget = Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
@@ -153,7 +149,7 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
       if (salary != null && salary > 0) {
         _processBudgetPlan(salary);
       } else {
-        _addBotMessage("Please enter a valid salary amount (e.g., 50000).");
+        _addBotMessage(L10n.s("bot_valid_salary"));
       }
       return;
     }
@@ -162,9 +158,7 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
     if (option != null && ChatbotData.questions.containsKey(option)) {
       _handleSelection(option);
     } else {
-      _addBotMessage(
-        "I'm sorry, I didn't recognize that option. Please enter a number from 1 to 10.",
-      );
+      _addBotMessage(L10n.s("bot_unrecognized_option"));
     }
   }
 
@@ -176,10 +170,8 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
     } else {
       // Specialized Budget Planning flow
       _currentFlow = ChatFlow.budgetSalary;
-      _addBotMessage("Let's plan your budget! 📊");
-      _addBotMessage(
-        "First, what is your total monthly net salary (after taxes)?",
-      );
+      _addBotMessage(L10n.s("bot_plan_budget"));
+      _addBotMessage(L10n.s("bot_ask_salary"));
     }
   }
 
@@ -193,23 +185,19 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
     setState(() {
       _isTyping = false;
       _messages.add(
-        Message(text: answer ?? "Something went wrong.", isBot: true),
+        Message(text: answer ?? L10n.s("something_went_wrong"), isBot: true),
       );
     });
 
     await Future.delayed(const Duration(milliseconds: 500));
-    _addBotMessage(
-      "Do you need more help? (Enter another option number or scroll up to see the menu)",
-    );
+    _addBotMessage(L10n.s("bot_need_more_help"));
     _currentFlow = ChatFlow.menu;
     _scrollToBottom();
   }
 
   void _processBudgetPlan(double salary) async {
     _currentFlow = ChatFlow.budgetResult;
-    _addBotMessage(
-      "Analyzing your spending habits from the previous month... 🔍",
-    );
+    _addBotMessage(L10n.s("bot_analyzing"));
 
     // Get last month's date range
     final now = DateTime.now();
@@ -242,12 +230,12 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
 
     if (hasData) {
       _addBotMessage(
-        "Based on your salary of ₹${salary.toStringAsFixed(0)} and last month's expenses (₹${historicalExpense.toStringAsFixed(0)}), here is your suggested plan:",
+        L10n.s("bot_suggested_plan")
+            .replaceAll("{salary}", salary.toStringAsFixed(0))
+            .replaceAll("{expenses}", historicalExpense.toStringAsFixed(0)),
       );
     } else {
-      _addBotMessage(
-        "Last month's expenses were not found or not tracked. Assuming the following estimated expenses for your profile:",
-      );
+      _addBotMessage(L10n.s("bot_no_expenses_found"));
     }
 
     final reportWidget = Container(
@@ -266,7 +254,7 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "INTELLIGENT BUDGET PLAN",
+                L10n.s("intelligent_budget_plan"),
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
@@ -281,7 +269,7 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                "Assuming default estimated values",
+                L10n.s("assuming_default_values"),
                 style: GoogleFonts.poppins(
                   fontSize: 10,
                   color: Colors.orange,
@@ -291,19 +279,19 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
             ),
           const Divider(height: 24),
           _reportItem(
-            "Monthly Salary",
+            L10n.s("monthly_salary"),
             "₹${salary.toStringAsFixed(0)}",
             Colors.green,
           ),
           _reportItem(
-            hasData ? "Total Spent" : "Estimated Spent",
+            hasData ? L10n.s("total_spent") : L10n.s("estimated_spent"),
             "₹${displayExpense.toStringAsFixed(0)}",
             Colors.red,
           ),
 
           const SizedBox(height: 12),
           Text(
-            "Category breakdown:",
+            L10n.s("category_breakdown"),
             style: GoogleFonts.poppins(
               fontSize: 12,
               fontWeight: FontWeight.bold,
@@ -320,13 +308,15 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
               ),
             )
           else ...[
-            _reportItem("BILLS", "₹5000", Colors.grey[700]!),
-            _reportItem("RECHARGE", "₹300", Colors.grey[700]!),
+            _reportItem(L10n.s("bills_upper"), "₹5000", Colors.grey[700]!),
+            _reportItem(L10n.s("recharge_upper"), "₹300", Colors.grey[700]!),
           ],
 
           const Divider(height: 24),
           Text(
-            disposable > 0 ? "Projected Savings" : "Budget Overrun",
+            disposable > 0
+                ? L10n.s("projected_savings")
+                : L10n.s("budget_overrun"),
             style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
           ),
           Text(
@@ -353,12 +343,15 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          "Suggested Daily Limit",
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        Text(
+                          L10n.s("suggested_daily_limit"),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
                         ),
                         Text(
-                          "₹${dailyLimit.toStringAsFixed(0)} / day",
+                          "₹${dailyLimit.toStringAsFixed(0)} / ${L10n.s("day")}",
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -374,7 +367,7 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Text(
-                "Warning: Your spending exceeds your salary. Consider reducing non-essential expenses.",
+                L10n.s("warning_overrun"),
                 style: GoogleFonts.poppins(
                   fontSize: 12,
                   color: Colors.red,
@@ -391,9 +384,7 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
     });
 
     await Future.delayed(const Duration(milliseconds: 1000));
-    _addBotMessage(
-      "I've also updated your active budget settings. Do you need more help?",
-    );
+    _addBotMessage(L10n.s("bot_updated_budget"));
 
     // Actually update the app's budget state if needed
     BudgetManager().updateBudget(
@@ -591,7 +582,7 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
             child: TextField(
               controller: _inputController,
               decoration: InputDecoration(
-                hintText: "Type a number or message...",
+                hintText: L10n.s("type_message"),
                 hintStyle: GoogleFonts.poppins(fontSize: 14),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),

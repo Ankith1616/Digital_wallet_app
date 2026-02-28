@@ -52,7 +52,7 @@ class DigitalWalletApp extends StatelessWidget {
                       body: Center(child: CircularProgressIndicator()),
                     );
                   }
-                  if (snapshot.hasData) return const MainLayout();
+                  if (snapshot.hasData) return MainLayout();
                   return const LoginScreen();
                 },
               ),
@@ -75,12 +75,12 @@ class _MainLayoutState extends State<MainLayout> {
   int _currentIndex = 0;
   StreamSubscription? _widgetClickSubscription;
 
-  final List<Widget> _pages = [
-    const DashboardTab(),
-    const StatsTab(),
-    const ScannerTab(),
-    const TransactionHistoryScreen(showAppBar: false),
-    const ExpensyaChatbotScreen(),
+  List<Widget> get _pages => [
+    DashboardTab(),
+    StatsTab(),
+    ScannerTab(),
+    TransactionHistoryScreen(showAppBar: false),
+    ExpensyaChatbotScreen(),
   ];
 
   @override

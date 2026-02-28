@@ -5,8 +5,9 @@ import '../utils/theme_manager.dart';
 import '../utils/auth_manager.dart';
 import '../utils/firebase_auth_service.dart';
 import '../utils/fcm_service.dart';
+import 'otp_verification_screen.dart';
 import 'pin_screen.dart';
-import 'phone_login_screen.dart';
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import '../widgets/interactive_scale.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -33,10 +34,26 @@ class _LoginScreenState extends State<LoginScreen>
   bool _obscureSignUp = true;
   bool _loading = false;
 
+  // Phone controllers
+  final _phoneController = TextEditingController();
+  final _phoneFormKey = GlobalKey<FormState>();
+  String _selectedCountryCode = '+91';
+
+  final List<Map<String, String>> _countryCodes = [
+    {'code': '+91', 'flag': 'IN'},
+    {'code': '+1', 'flag': 'US'},
+    {'code': '+44', 'flag': 'UK'},
+    {'code': '+61', 'flag': 'AU'},
+    {'code': '+81', 'flag': 'JP'},
+    {'code': '+86', 'flag': 'CN'},
+    {'code': '+971', 'flag': 'AE'},
+    {'code': '+65', 'flag': 'SG'},
+  ];
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -47,6 +64,7 @@ class _LoginScreenState extends State<LoginScreen>
     _signUpNameCtrl.dispose();
     _signUpEmailCtrl.dispose();
     _signUpPasswordCtrl.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -229,7 +247,8 @@ class _LoginScreenState extends State<LoginScreen>
                         fontSize: 14,
                       ),
                       tabs: const [
-                        Tab(text: 'Sign In'),
+                        Tab(text: 'Email'),
+                        Tab(text: 'Phone'),
                         Tab(text: 'Sign Up'),
                       ],
                     ),
@@ -241,7 +260,11 @@ class _LoginScreenState extends State<LoginScreen>
                     height: 320,
                     child: TabBarView(
                       controller: _tabController,
-                      children: [_buildSignInTab(), _buildSignUpTab()],
+                      children: [
+                        _buildSignInTab(),
+                        _buildPhoneLoginTab(),
+                        _buildSignUpTab(),
+                      ],
                     ),
                   ),
 
@@ -265,19 +288,6 @@ class _LoginScreenState extends State<LoginScreen>
                     ],
                   ),
                   const SizedBox(height: 20),
-
-                  // Phone login button
-                  _socialButton(
-                    Icons.phone_android_rounded,
-                    'Continue with Phone',
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const PhoneLoginScreen(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
 
                   // Biometric button
                   _socialButton(
@@ -370,6 +380,174 @@ class _LoginScreenState extends State<LoginScreen>
         const SizedBox(height: 20),
         _primaryButton('Create Account', _handleSignUp),
       ],
+    );
+  }
+
+  Widget _buildPhoneLoginTab() {
+    if (kIsWeb) {
+      return Center(
+        child: Text(
+          'Phone login \nis not available \non web.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.spaceGrotesk(color: Colors.white54, fontSize: 16),
+        ),
+      );
+    }
+    return Form(
+      key: _phoneFormKey,
+      child: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withOpacity(0.15)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedCountryCode,
+                      dropdownColor: const Color(0xFF1E1E2C),
+                      style: GoogleFonts.spaceGrotesk(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: Colors.white38,
+                        size: 18,
+                      ),
+                      items: _countryCodes.map((cc) {
+                        return DropdownMenuItem(
+                          value: cc['code'],
+                          child: Text(
+                            '${cc['flag']} ${cc['code']}',
+                            style: GoogleFonts.spaceGrotesk(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() => _selectedCountryCode = val);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 30,
+                  color: Colors.white.withOpacity(0.15),
+                ),
+                Expanded(
+                  child: TextFormField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    style: GoogleFonts.spaceGrotesk(
+                      color: Colors.white,
+                      fontSize: 16,
+                      letterSpacing: 1.2,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Enter mobile number',
+                      hintStyle: GoogleFonts.spaceGrotesk(
+                        color: Colors.white30,
+                        fontSize: 14,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter your phone number';
+                      }
+                      if (value.trim().length < 10) {
+                        return 'Enter a valid phone number';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          _primaryButton('Send OTP', _handlePhoneLogin),
+          const SizedBox(height: 12),
+          Text(
+            'Standard SMS charges may apply.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.spaceGrotesk(
+              color: Colors.white54,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handlePhoneLogin() async {
+    if (!_phoneFormKey.currentState!.validate()) return;
+
+    var phone = _phoneController.text.trim();
+    if (phone.startsWith('+')) {
+      if (phone.startsWith(_selectedCountryCode)) {
+        phone = phone.substring(_selectedCountryCode.length);
+      } else {
+        _showError(
+          'Number starts with a different country code than selected.',
+        );
+        return;
+      }
+    }
+
+    final fullNumber = '$_selectedCountryCode$phone';
+    if (kDebugMode) print('[PhoneAuth] Sending full number: $fullNumber');
+
+    setState(() => _loading = true);
+
+    await FirebaseAuthService().verifyPhoneNumber(
+      phoneNumber: fullNumber,
+      onCodeSent: (verificationId, resendToken) {
+        if (!mounted) return;
+        setState(() => _loading = false);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OtpVerificationScreen(
+              phoneNumber: fullNumber,
+              verificationId: verificationId,
+              resendToken: resendToken,
+            ),
+          ),
+        );
+      },
+      onAutoVerified: (credential) async {
+        if (credential.user != null) {
+          await FcmService().init(uid: credential.user!.uid);
+        }
+        if (!mounted) return;
+        setState(() => _loading = false);
+      },
+      onFailed: (error) {
+        if (!mounted) return;
+        setState(() => _loading = false);
+        _showError(error);
+      },
+      onTimeout: (verificationId) {
+        // Covered by OTP screen
+      },
     );
   }
 
@@ -526,4 +704,3 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 }
-

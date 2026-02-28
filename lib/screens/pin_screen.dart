@@ -29,6 +29,7 @@ class _PinScreenState extends State<PinScreen>
   String _pin = '';
   String _firstPin = '';
   bool _isConfirming = false;
+  bool _isSuccess = false;
   int _strikeCount = 0;
 
   late AnimationController _shakeController;
@@ -90,16 +91,13 @@ class _PinScreenState extends State<PinScreen>
   }
 
   void _onDigitPress(String digit) {
-    if (_pin.length >= 4) return;
+    if (_isSuccess || _pin.length >= 4) return;
     HapticFeedback.lightImpact();
     setState(() => _pin += digit);
-    if (_pin.length == 4) {
-      Future.delayed(const Duration(milliseconds: 120), _handlePinSubmit);
-    }
   }
 
   void _onDeletePress() {
-    if (_pin.isEmpty) return;
+    if (_isSuccess || _pin.isEmpty) return;
     HapticFeedback.selectionClick();
     setState(() => _pin = _pin.substring(0, _pin.length - 1));
   }
@@ -120,9 +118,13 @@ class _PinScreenState extends State<PinScreen>
 
       bool isValid = HashHelper.verifyPin(_pin, widget.expectedBankPinHash!);
       if (isValid) {
+        setState(() => _isSuccess = true);
         HapticFeedback.heavyImpact();
-        if (widget.onSuccess != null) widget.onSuccess!();
-        if (mounted) Navigator.pop(context, true);
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted) {
+          if (widget.onSuccess != null) widget.onSuccess!();
+          Navigator.pop(context, true);
+        }
       } else {
         setState(() => _strikeCount++);
         if (_strikeCount >= 3) {
@@ -137,10 +139,14 @@ class _PinScreenState extends State<PinScreen>
     } else if (widget.mode == PinMode.createBank) {
       if (_isConfirming) {
         if (_pin == _firstPin) {
+          setState(() => _isSuccess = true);
           HapticFeedback.heavyImpact();
-          if (widget.onSuccess != null) widget.onSuccess!();
-          // Return the raw PIN so the caller can hash it and save it with the bank doc
-          if (mounted) Navigator.pop(context, _pin);
+          await Future.delayed(const Duration(milliseconds: 600));
+          if (mounted) {
+            if (widget.onSuccess != null) widget.onSuccess!();
+            // Return the raw PIN so the caller can hash it and save it with the bank doc
+            Navigator.pop(context, _pin);
+          }
         } else {
           _showShake('PINs do not match');
           setState(() {
@@ -158,9 +164,13 @@ class _PinScreenState extends State<PinScreen>
     } else if (widget.mode == PinMode.verify) {
       bool isValid = await auth.verifyPin(_pin);
       if (isValid) {
+        setState(() => _isSuccess = true);
         HapticFeedback.heavyImpact();
-        if (widget.onSuccess != null) widget.onSuccess!();
-        if (mounted) Navigator.pop(context, true);
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted) {
+          if (widget.onSuccess != null) widget.onSuccess!();
+          Navigator.pop(context, true);
+        }
       } else {
         _showShake('Incorrect PIN');
       }
@@ -168,9 +178,13 @@ class _PinScreenState extends State<PinScreen>
       if (_isConfirming) {
         if (_pin == _firstPin) {
           await auth.setPin(_pin);
+          setState(() => _isSuccess = true);
           HapticFeedback.heavyImpact();
-          if (widget.onSuccess != null) widget.onSuccess!();
-          if (mounted) Navigator.pop(context, true);
+          await Future.delayed(const Duration(milliseconds: 600));
+          if (mounted) {
+            if (widget.onSuccess != null) widget.onSuccess!();
+            Navigator.pop(context, true);
+          }
         } else {
           _showShake('PINs do not match');
           setState(() {
@@ -198,7 +212,9 @@ class _PinScreenState extends State<PinScreen>
         }
       } else {
         await auth.setPin(_pin);
+        setState(() => _isSuccess = true);
         HapticFeedback.heavyImpact();
+        await Future.delayed(const Duration(milliseconds: 600));
         if (mounted) Navigator.pop(context, true);
       }
     }
@@ -340,16 +356,27 @@ class _PinScreenState extends State<PinScreen>
                           height: filled ? 18 : 16,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            gradient: filled ? AppColors.primaryGradient : null,
-                            color: filled
+                            gradient: _isSuccess
+                                ? const LinearGradient(
+                                    colors: [
+                                      AppColors.success,
+                                      AppColors.success,
+                                    ],
+                                  )
+                                : (filled ? AppColors.primaryGradient : null),
+                            color: filled || _isSuccess
                                 ? null
                                 : (isDark
                                       ? Colors.white.withOpacity(0.15)
                                       : Colors.grey.shade200),
-                            boxShadow: filled
+                            boxShadow: filled || _isSuccess
                                 ? [
                                     BoxShadow(
-                                      color: AppColors.primary.withOpacity(0.5),
+                                      color:
+                                          (_isSuccess
+                                                  ? AppColors.success
+                                                  : AppColors.primary)
+                                              .withOpacity(0.5),
                                       blurRadius: 8,
                                       spreadRadius: 1,
                                     ),
@@ -415,15 +442,17 @@ class _PinScreenState extends State<PinScreen>
     }
 
     return GestureDetector(
-      onTap: () {
-        if (isDelete) {
-          _onDeletePress();
-        } else if (isConfirm) {
-          if (isConfirmEnabled) _handlePinSubmit();
-        } else {
-          _onDigitPress(key);
-        }
-      },
+      onTap: _isSuccess
+          ? null
+          : () {
+              if (isDelete) {
+                _onDeletePress();
+              } else if (isConfirm) {
+                if (isConfirmEnabled) _handlePinSubmit();
+              } else {
+                _onDigitPress(key);
+              }
+            },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
@@ -483,4 +512,3 @@ class _PinScreenState extends State<PinScreen>
     );
   }
 }
-

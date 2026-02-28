@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/theme_manager.dart';
 import '../models/transaction.dart';
 import '../utils/transaction_manager.dart';
+import '../utils/localization_helper.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   final bool showAppBar;
@@ -26,7 +27,12 @@ class TransactionHistoryScreen extends StatefulWidget {
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   int _selectedFilterIndex = 0;
-  final List<String> _filters = ["All", "Received", "Sent", "Bills"];
+  List<String> get _filters => [
+    L10n.s('all_filter'),
+    L10n.s('received'),
+    L10n.s('sent'),
+    L10n.s('bills'),
+  ];
   late final TextEditingController _searchController;
   late String _searchQuery;
 
@@ -326,7 +332,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                "Generate Statement",
+                L10n.s("generate_statement"),
                 style: GoogleFonts.spaceGrotesk(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -335,7 +341,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                "Select the duration for your transaction report",
+                L10n.s("select_duration_report"),
                 style: GoogleFonts.spaceGrotesk(color: Colors.grey),
               ),
               const SizedBox(height: 32),
@@ -476,7 +482,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     ),
                   ),
                   child: Text(
-                    "Download Statement",
+                    L10n.s("download_statement"),
                     style: GoogleFonts.spaceGrotesk(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -549,7 +555,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  "History",
+                                  L10n.s("history"),
                                   style: GoogleFonts.spaceGrotesk(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
@@ -571,7 +577,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                       ),
                                     ),
                                     child: Text(
-                                      "Download",
+                                      L10n.s("download"),
                                       style: GoogleFonts.spaceGrotesk(
                                         color: Colors.white,
                                         fontSize: 12,
@@ -583,7 +589,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                               ],
                             ),
                             Text(
-                              "Track your spending & earnings",
+                              L10n.s("track_spending"),
                               style: GoogleFonts.spaceGrotesk(
                                 fontSize: 14,
                                 color: Colors.white.withOpacity(0.7),
@@ -636,7 +642,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                 setState(() => _searchQuery = val),
                             style: GoogleFonts.spaceGrotesk(fontSize: 14),
                             decoration: InputDecoration(
-                              hintText: "Search transactions...",
+                              hintText: L10n.s("search_transactions"),
                               hintStyle: GoogleFonts.spaceGrotesk(
                                 color: Colors.grey,
                                 fontSize: 14,
@@ -739,7 +745,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          "No transactions found",
+                          L10n.s("no_transactions_found"),
                           style: GoogleFonts.spaceGrotesk(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -747,7 +753,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                           ),
                         ),
                         Text(
-                          "Try adjusting your filters",
+                          L10n.s("try_adjusting_filters"),
                           style: GoogleFonts.spaceGrotesk(color: Colors.grey),
                         ),
                       ],
@@ -900,4 +906,3 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     );
   }
 }
-
