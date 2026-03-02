@@ -399,4 +399,39 @@ class FirestoreService {
       );
     }
   }
+
+  // ─── Rewards & Cashback ────────────────────────────────────────
+
+  /// Live stream of the user's rewards data {cashbackBalance, totalEarned}
+  Stream<Map<String, double>> rewardsStream(String uid) {
+    return _db.collection('users').doc(uid).snapshots().map((doc) {
+      final data = doc.data() ?? {};
+      return {
+        'cashbackBalance': (data['cashbackBalance'] as num?)?.toDouble() ?? 0.0,
+        'totalEarned': (data['totalEarned'] as num?)?.toDouble() ?? 0.0,
+      };
+    });
+  }
+
+  /// Credit cashback to user (increments both cashbackBalance and totalEarned)
+  Future<void> addCashback(String uid, double amount) async {
+    if (amount <= 0) return;
+    await _db.collection('users').doc(uid).set({
+      'cashbackBalance': FieldValue.increment(amount),
+      'totalEarned': FieldValue.increment(amount),
+    }, SetOptions(merge: true));
+  }
+
+  /// Deduct [amount] from cashback balance (never goes below 0)
+  Future<void> redeemRewards(String uid, double amount) async {
+    if (amount <= 0) return;
+    // Fetch current balance to guard against going negative
+    final doc = await _db.collection('users').doc(uid).get();
+    final current = (doc.data()?['cashbackBalance'] as num?)?.toDouble() ?? 0.0;
+    final deduct = amount > current ? current : amount;
+    if (deduct <= 0) return;
+    await _db.collection('users').doc(uid).update({
+      'cashbackBalance': FieldValue.increment(-deduct),
+    });
+  }
 }

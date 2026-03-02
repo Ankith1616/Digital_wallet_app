@@ -11,6 +11,8 @@ import 'theme_selection_screen.dart';
 import 'help_support_screen.dart';
 import 'about_screen.dart';
 import 'autopay_management_screen.dart';
+import 'biometric_settings_screen.dart';
+import 'pin_gate_screen.dart';
 import '../widgets/interactive_scale.dart';
 import '../utils/locale_manager.dart';
 import '../utils/localization_helper.dart';
@@ -208,23 +210,35 @@ class ProfileTab extends StatelessWidget {
               context,
               Icons.notifications_rounded,
               L10n.s("notifications"),
-              const Color(0xFFFF8C42), // amber
+              const Color(0xFFFF8C42),
               const NotificationsSettingsScreen(),
               isDark,
             ),
+            // Biometric & Security tile
             _settingsTile(
+              context,
+              Icons.fingerprint,
+              'Biometric & Security',
+              const Color(0xFF4CAF50),
+              const BiometricSettingsScreen(),
+              isDark,
+            ),
+            // Privacy & Security — PIN protected
+            _pinProtectedTile(
               context,
               Icons.shield_rounded,
               L10n.s("privacy_security"),
-              const Color(0xFFFF4F6D), // coral
+              const Color(0xFFFF4F6D),
               const PrivacySecurityScreen(),
               isDark,
+              title: 'Security Settings',
+              subtitle: 'Enter PIN to access privacy & security settings.',
             ),
             _settingsTile(
               context,
               Icons.palette_rounded,
               L10n.s("theme"),
-              const Color(0xFF7B2FBE), // nebula purple
+              const Color(0xFF7B2FBE),
               const ThemeSelectionScreen(),
               isDark,
             ),
@@ -342,42 +356,66 @@ class ProfileTab extends StatelessWidget {
         }
       },
       borderRadius: BorderRadius.circular(14),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkCard : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isDark
-                ? AppColors.darkBorder.withOpacity(0.4)
-                : Colors.black.withOpacity(0.04),
+      child: _tileBody(icon, title, iconColor, isDark),
+    );
+  }
+
+  /// A tile that first verifies PIN before navigating to [dest].
+  Widget _pinProtectedTile(
+    BuildContext context,
+    IconData icon,
+    String tileLabel,
+    Color iconColor,
+    Widget dest,
+    bool isDark, {
+    String? title,
+    String? subtitle,
+  }) {
+    return InteractiveScale(
+      onTap: () {
+        PinGateScreen.push(
+          context,
+          destination: dest,
+          title: title,
+          subtitle: subtitle,
+        );
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: _tileBody(icon, tileLabel, iconColor, isDark),
+    );
+  }
+
+  Widget _tileBody(IconData icon, String title, Color iconColor, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark
+              ? AppColors.darkBorder.withOpacity(0.4)
+              : Colors.black.withOpacity(0.04),
+        ),
+      ),
+      child: ListTile(
+        dense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: iconColor, size: 20),
+        ),
+        title: Text(
+          title,
+          style: GoogleFonts.spaceGrotesk(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
           ),
         ),
-        child: ListTile(
-          dense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14),
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          title: Text(
-            title,
-            style: GoogleFonts.spaceGrotesk(
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-              color: Theme.of(context).textTheme.bodyLarge?.color,
-            ),
-          ),
-          trailing: Icon(
-            Icons.chevron_right_rounded,
-            size: 20,
-            color: isDark ? const Color(0xFF4A5580) : Colors.grey[400],
-          ),
-        ),
+        trailing: const Icon(Icons.chevron_right_rounded, size: 20),
       ),
     );
   }

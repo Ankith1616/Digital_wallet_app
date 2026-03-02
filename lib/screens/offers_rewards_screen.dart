@@ -1,243 +1,390 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 import '../utils/theme_manager.dart';
-import '../widgets/interactive_scale.dart';
+import '../utils/firestore_service.dart';
+import '../models/transaction.dart';
 
-class OffersRewardsScreen extends StatelessWidget {
+class OffersRewardsScreen extends StatefulWidget {
   const OffersRewardsScreen({super.key});
 
   @override
+  State<OffersRewardsScreen> createState() => _OffersRewardsScreenState();
+}
+
+class _OffersRewardsScreenState extends State<OffersRewardsScreen> {
+  bool _applyRewardsNext = false;
+
+  @override
   Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    if (uid == null) {
+      return const Scaffold(body: Center(child: Text('Not signed in')));
+    }
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // Header with gradient
-          SliverToBoxAdapter(
-            child: Container(
-              decoration: BoxDecoration(gradient: AppColors.headerGradient),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: const Icon(
-                          Icons.arrow_back_ios,
-                          color: Colors.white,
-                          size: 20,
+      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+      appBar: AppBar(
+        title: Text(
+          'Rewards & Cashback',
+          style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      body: StreamBuilder<Map<String, double>>(
+        stream: FirestoreService().rewardsStream(uid),
+        builder: (context, rewardsSnap) {
+          final cashbackBalance = rewardsSnap.data?['cashbackBalance'] ?? 0.0;
+          final totalEarned = rewardsSnap.data?['totalEarned'] ?? 0.0;
+
+          return StreamBuilder<List<Transaction>>(
+            stream: FirestoreService().transactionsStream(uid),
+            builder: (context, txSnap) {
+              final allTx = txSnap.data ?? [];
+              // Show recent debit transactions (these earned cashback)
+              final cashbackHistory = allTx
+                  .where((t) => !t.isPositive && t.amount.abs() >= 10)
+                  .take(30)
+                  .toList();
+
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // ── Hero balance card ─────────────────────────────────
+                  _heroCard(cashbackBalance, totalEarned, isDark),
+                  const SizedBox(height: 20),
+
+                  // ── Apply rewards toggle ──────────────────────────────
+                  _applyToggleCard(isDark),
+                  const SizedBox(height: 20),
+
+                  // ── How it works ──────────────────────────────────────
+                  _howItWorksCard(isDark),
+                  const SizedBox(height: 20),
+
+                  // ── History ───────────────────────────────────────────
+                  _sectionLabel('CASHBACK HISTORY'),
+                  const SizedBox(height: 8),
+                  if (cashbackHistory.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Text(
+                          'No transactions yet.\nStart paying to earn cashback!',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.spaceGrotesk(color: Colors.grey),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Text(
-                        "Offers & Rewards",
-                        style: GoogleFonts.poppins(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
+                    )
+                  else
+                    ...cashbackHistory.map(
+                      (tx) => _cashbackHistoryTile(tx, isDark),
+                    ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  // ── Hero card ─────────────────────────────────────────────────────────────
+  Widget _heroCard(double balance, double totalEarned, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, Color(0xFF7B2FBE)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.35),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.stars_rounded, color: Colors.amber, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'Your Cashback',
+                style: GoogleFonts.spaceGrotesk(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '₹${balance.toStringAsFixed(2)}',
+            style: GoogleFonts.spaceGrotesk(
+              color: Colors.white,
+              fontSize: 40,
+              fontWeight: FontWeight.bold,
             ),
           ),
-
-          // Main Content
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _sectionHeader("Your Rewards"),
-                  const SizedBox(height: 12),
-                  _buildScratchCards(),
-                  const SizedBox(height: 24),
-                  _sectionHeader("Trending Offers"),
-                  const SizedBox(height: 12),
-                  _buildOfferList(isDark),
-                ],
-              ),
+          const SizedBox(height: 4),
+          Text(
+            'Available Balance',
+            style: GoogleFonts.spaceGrotesk(
+              color: Colors.white60,
+              fontSize: 12,
             ),
+          ),
+          const Divider(color: Colors.white24, height: 28),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _statCol('₹${totalEarned.toStringAsFixed(2)}', 'Total Earned'),
+              _statCol(
+                '₹${(totalEarned - balance).toStringAsFixed(2)}',
+                'Redeemed',
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _sectionHeader(String title) {
-    return Text(
-      title,
-      style: GoogleFonts.poppins(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: Colors.grey[700],
-      ),
-    );
-  }
-
-  Widget _buildScratchCards() {
-    return SizedBox(
-      height: 110,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          _scratchCard(const Color(0xFF6C63FF), "UPI Reward"),
-          _scratchCard(const Color(0xFF00E5A0), "Merchant Pay"),
-          _scratchCard(const Color(0xFFFF6584), "Bill Payment"),
-        ],
-      ),
-    );
-  }
-
-  Widget _scratchCard(Color color, String label) {
-    return InteractiveScale(
-      onTap: () {}, // Handled by visual feedback for now
-      child: Container(
-        width: 100,
-        margin: const EdgeInsets.only(right: 12),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.3)),
+  Widget _statCol(String value, String label) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.spaceGrotesk(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        child: Stack(
-          children: [
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.card_giftcard, color: color, size: 28),
-                  const SizedBox(height: 6),
-                  Text(
-                    label,
-                    style: GoogleFonts.poppins(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: color,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: 4,
-              right: 4,
-              child: Icon(Icons.stars, color: color.withOpacity(0.5), size: 14),
-            ),
-          ],
+        Text(
+          label,
+          style: GoogleFonts.spaceGrotesk(color: Colors.white60, fontSize: 11),
+        ),
+      ],
+    );
+  }
+
+  // ── Apply rewards toggle ──────────────────────────────────────────────────
+  Widget _applyToggleCard(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _applyRewardsNext
+              ? AppColors.success.withOpacity(0.5)
+              : Colors.transparent,
         ),
       ),
+      child: SwitchListTile(
+        value: _applyRewardsNext,
+        onChanged: (val) => setState(() => _applyRewardsNext = val),
+        activeColor: AppColors.success,
+        secondary: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.success.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(
+            Icons.redeem_rounded,
+            color: AppColors.success,
+            size: 22,
+          ),
+        ),
+        title: Text(
+          'Apply Rewards Next Payment',
+          style: GoogleFonts.spaceGrotesk(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+        subtitle: Text(
+          _applyRewardsNext
+              ? 'Rewards will be applied on your next transaction'
+              : 'Toggle to use your cashback balance',
+          style: GoogleFonts.spaceGrotesk(fontSize: 11, color: Colors.grey),
+        ),
+      ),
     );
   }
 
-  Widget _buildOfferList(bool isDark) {
-    final offers = [
-      {
-        'title': 'Domino\'s Pizza',
-        'subtitle': 'Flat 40% OFF on all orders',
-        'code': 'OFFER40',
-        'color': Colors.redAccent,
-        'icon': Icons.local_pizza,
-      },
-      {
-        'title': 'Amazon Pay',
-        'subtitle': '₹50 Cashback on utility bills',
-        'code': 'BILL50',
-        'color': Colors.orangeAccent,
-        'icon': Icons.flash_on,
-      },
-      {
-        'title': 'MakeMyTrip',
-        'subtitle': '₹1000 OFF on international flights',
-        'code': 'MMTWORLD',
-        'color': Colors.blueAccent,
-        'icon': Icons.flight,
-      },
+  // ── How it works ──────────────────────────────────────────────────────────
+  Widget _howItWorksCard(bool isDark) {
+    final steps = [
+      (
+        Icons.payment_rounded,
+        'Pay with Wallet or Bank',
+        'Every payment earns cashback',
+      ),
+      (
+        Icons.percent_rounded,
+        'Earn 1% Cashback',
+        'Up to ₹50 per transaction, min ₹10',
+      ),
+      (Icons.redeem_rounded, 'Redeem Instantly', 'Apply to your next payment'),
     ];
 
-    return Column(children: offers.map((o) => _offerItem(o, isDark)).toList());
-  }
-
-  Widget _offerItem(Map<String, dynamic> o, bool isDark) {
-    final color = o['color'] as Color;
-    return InteractiveScale(
-      onTap: () {},
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF2A2A3D) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isDark ? Colors.white12 : Colors.grey.withOpacity(0.1),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(o['icon'] as IconData, color: color, size: 24),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'How It Works',
+            style: GoogleFonts.spaceGrotesk(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          const SizedBox(height: 12),
+          ...steps.map(
+            (s) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
                 children: [
-                  Text(
-                    o['title'] as String,
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  Text(
-                    o['subtitle'] as String,
-                    style: GoogleFonts.poppins(
-                      color: Colors.grey,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.black26 : Colors.grey[100],
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: isDark ? Colors.white10 : Colors.grey.shade300,
-                        style: BorderStyle.solid,
-                      ),
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(
-                      "CODE: ${o['code']}",
-                      style: GoogleFonts.spaceGrotesk(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
-                        letterSpacing: 1,
-                      ),
+                    child: Icon(s.$1, color: AppColors.primary, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          s.$2,
+                          style: GoogleFonts.spaceGrotesk(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          s.$3,
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 14),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Cashback history tile ─────────────────────────────────────────────────
+  Widget _cashbackHistoryTile(Transaction tx, bool isDark) {
+    final cashback = (tx.amount.abs() * 0.01).clamp(0.0, 50.0);
+    final fmt = DateFormat('dd MMM, hh:mm a');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: tx.color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(tx.icon, color: tx.color, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tx.title,
+                  style: GoogleFonts.spaceGrotesk(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  fmt.format(tx.date),
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 11,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '-₹${tx.amount.abs().toStringAsFixed(0)}',
+                style: GoogleFonts.spaceGrotesk(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: AppColors.error,
+                ),
+              ),
+              Text(
+                '+₹${cashback.toStringAsFixed(2)} CB',
+                style: GoogleFonts.spaceGrotesk(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                  color: AppColors.success,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Text(
+      text,
+      style: GoogleFonts.spaceGrotesk(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: AppColors.primary.withOpacity(0.7),
+        letterSpacing: 1.2,
       ),
     );
   }
 }
-

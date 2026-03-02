@@ -30,11 +30,20 @@ class AuthService {
   bool _isInstantPayEnabled = false;
   bool get isInstantPayEnabled => _isInstantPayEnabled;
 
-  double _instantLimit = 500.0;
+  double _instantLimit = 1000.0;
   double get instantLimit => _instantLimit;
+
+  /// Alias: biometric limit is the same as instantLimit
+  double get biometricTransactionLimit => _instantLimit;
 
   double _instantDailyUsage = 0.0;
   double get instantDailyUsage => _instantDailyUsage;
+
+  /// Returns true if biometric is enabled AND the amount exceeds the threshold.
+  /// Payment flows should call biometric first, then fall back to PIN.
+  bool requiresBiometric(double amount) {
+    return _isBiometricEnabled && amount > _instantLimit;
+  }
 
   /// Initialize auth settings
   Future<void> init() async {

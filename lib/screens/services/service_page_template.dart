@@ -4,6 +4,7 @@ import '../../utils/theme_manager.dart';
 import '../../utils/transaction_manager.dart';
 import '../../models/transaction.dart';
 import '../../utils/auth_manager.dart';
+import '../../utils/rewards_service.dart';
 import '../pin_screen.dart';
 import '../../widgets/payment_result_dialog.dart';
 import '../../widgets/payment_confirmation_sheet.dart';
@@ -355,6 +356,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
   }
 
   Widget _buildField(ServiceField field, bool isDark) {
+    final labelText = field.isRequired ? '${field.label} *' : field.label;
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : Colors.white,
@@ -370,8 +372,28 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
           fontSize: 15,
           color: Theme.of(context).textTheme.bodyLarge?.color,
         ),
+        validator:
+            field.validator ??
+            (field.isRequired
+                ? (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return '${field.label} is required';
+                    }
+                    if (field.keyboardType == TextInputType.number ||
+                        field.keyboardType ==
+                            const TextInputType.numberWithOptions(
+                              decimal: true,
+                            )) {
+                      final d = double.tryParse(val.trim());
+                      if (d == null || d <= 0) {
+                        return 'Enter a valid amount greater than 0';
+                      }
+                    }
+                    return null;
+                  }
+                : null),
         decoration: InputDecoration(
-          labelText: field.label,
+          labelText: labelText,
           labelStyle: GoogleFonts.spaceGrotesk(
             color: Colors.grey,
             fontSize: 13,
@@ -383,6 +405,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
           ),
           prefixIcon: Icon(field.icon, color: widget.themeColor, size: 20),
           border: InputBorder.none,
+          errorStyle: GoogleFonts.spaceGrotesk(fontSize: 11),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 14,
@@ -405,33 +428,53 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
+    // ── Step 1: Validate form fields ──────────────────────────────
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    // ── Step 2: Validate provider selection ──────────────────────
+    if (widget.providers != null &&
+        widget.providers!.isNotEmpty &&
+        _selectedProviderIndex == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please select a provider to continue.',
+            style: GoogleFonts.spaceGrotesk(),
+          ),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+      return;
+    }
+
     final auth = AuthService();
 
-    // 1. Find amount
+    // ── Step 3: Extract amount ────────────────────────────────────
     String amount = '0';
     for (var key in _controllers.keys) {
       if (key.toLowerCase().contains('amount') ||
           key.toLowerCase().contains('price')) {
-        amount = _controllers[key]?.text ?? '0';
+        amount = _controllers[key]?.text.trim() ?? '0';
         break;
       }
     }
     if (amount.isEmpty) amount = '0';
     final amountDouble = double.tryParse(amount) ?? 0.0;
 
-    // ─── Unified Multi-Step Payment Process ────────────────
-    // 1. Show Confirmation Sheet (Rewards + Bank + Auth Choice)
+    // ── Step 4: Show Payment Confirmation Sheet ───────────────────
     final confirmation = await PaymentConfirmationSheet.show(
       context,
       user.uid,
       amountDouble,
     );
-
-    if (confirmation == null) return; // Cancelled or Limit Failure inside sheet
-
+    if (confirmation == null) return;
     if (!mounted) return;
 
-    // 2. Authentication Verification
+    // ── Step 5: Authentication ────────────────────────────────────
     bool verified = false;
     final selectedBank = confirmation.bankAccount;
 
@@ -440,20 +483,34 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
         verified = true;
         await auth.recordInstantPayUsage(amountDouble);
       } else {
-        // Explicitly fail as per user request
         await PaymentResultDialog.show(
           context,
           success: false,
           title: 'Payment Failed',
           subtitle:
-              'Instant Payment limit exceeded. Cumulative daily limit is ₹2000.',
+              'Instant Pay limit exceeded. Daily limit is ₹${AuthService.maxDailyInstantLimit.toStringAsFixed(0)}.',
           amount: amount,
           recipient: widget.title,
         );
         return;
       }
-    } else if (confirmation.useBiometric) {
+    } else if (confirmation.useBiometric ||
+        auth.requiresBiometric(amountDouble)) {
+      // Biometric-first (also triggered by limit rule)
       verified = await auth.authenticateBiometrics();
+      if (!verified && mounted) {
+        // Fallback to PIN
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PinScreen(
+              mode: PinMode.verifyBank,
+              expectedBankPinHash: selectedBank.pinHash,
+            ),
+          ),
+        );
+        verified = result == true;
+      }
     } else {
       // Default: PIN Verification
       final result = await Navigator.push(
@@ -471,39 +528,48 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
     if (!verified) return;
     if (!mounted) return;
 
-    // 3. Deduct balance from the specific bank account
+    // ── Step 6: Deduct bank balance ───────────────────────────────
     await FirestoreService().updateBankAccountBalance(
       user.uid,
       selectedBank.id,
       -amountDouble,
     );
 
-    if (!verified) return;
-
     if (!mounted) return;
 
-    // 2. Add Transaction
+    // ── Step 7: Record transaction ────────────────────────────────
     TransactionManager().addTransaction(
       Transaction(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: widget.title,
         date: DateTime.now(),
-        amount: -(double.tryParse(amount) ?? 0.0),
+        amount: -amountDouble,
         isPositive: false,
         icon: widget.icon,
         color: widget.themeColor,
-        details: 'Service Payment',
+        details: confirmation.applyRewards
+            ? 'Service Payment (Rewards Applied)'
+            : 'Service Payment',
         category: TransactionCategory.bills,
       ),
     );
 
-    // 3. Show Success
+    // ── Step 8: Award cashback ────────────────────────────────────
+    await RewardsService().awardCashback(amountDouble);
+
+    if (!mounted) return;
+
+    // ── Step 9: Show result ───────────────────────────────────────
+    final cashback = RewardsService().calculateCashback(amountDouble);
+    final subtitle = cashback > 0
+        ? 'Your ${widget.title.toLowerCase()} has been processed. +₹${cashback.toStringAsFixed(2)} cashback earned!'
+        : 'Your ${widget.title.toLowerCase()} request has been processed successfully.';
+
     await PaymentResultDialog.show(
       context,
       success: true,
       title: 'Payment Successful!',
-      subtitle:
-          'Your ${widget.title.toLowerCase()} request has been processed successfully.',
+      subtitle: subtitle,
       amount: amount,
       recipient: widget.title,
       onDone: () => Navigator.pop(context),
@@ -518,11 +584,19 @@ class ServiceField {
   final IconData icon;
   final TextInputType keyboardType;
 
+  /// Whether this field is required (shown with * and validated non-empty)
+  final bool isRequired;
+
+  /// Optional custom validator. Return an error string or null.
+  final String? Function(String?)? validator;
+
   const ServiceField({
     required this.label,
     this.hint,
     required this.icon,
     this.keyboardType = TextInputType.text,
+    this.isRequired = true,
+    this.validator,
   });
 }
 

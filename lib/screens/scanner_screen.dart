@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:image_picker/image_picker.dart';
 import '../utils/theme_manager.dart';
 import '../utils/transaction_manager.dart';
 import '../utils/auth_manager.dart';
@@ -9,12 +8,14 @@ import '../models/transaction.dart';
 import '../utils/firestore_service.dart';
 import '../widgets/payment_confirmation_sheet.dart';
 import 'pin_screen.dart';
-import 'send_money_screen.dart';
-import 'wallet_screen.dart';
 import '../widgets/payment_result_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/localization_helper.dart';
+import '../utils/rewards_service.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ScannerTab — QR scanner with torch only (no gallery, no quick-action buttons)
+// ─────────────────────────────────────────────────────────────────────────────
 class ScannerTab extends StatefulWidget {
   const ScannerTab({super.key});
 
@@ -51,42 +52,19 @@ class _ScannerTabState extends State<ScannerTab> {
     try {
       final uri = Uri.parse(data);
       if (uri.scheme == 'upi') {
-        // Extract PN (Payee Name)
         final pn = uri.queryParameters['pn'];
-        if (pn != null && pn.isNotEmpty) {
-          return Uri.decodeComponent(pn);
-        }
-        // Fallback to PA (Payee Address/VPA)
+        if (pn != null && pn.isNotEmpty) return Uri.decodeComponent(pn);
         final pa = uri.queryParameters['pa'];
-        if (pa != null && pa.isNotEmpty) {
-          return pa;
-        }
+        if (pa != null && pa.isNotEmpty) return pa;
       }
     } catch (_) {}
     return data;
   }
 
-  Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      final capture = await _controller.analyzeImage(image.path);
-      if (capture == null || capture.barcodes.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(L10n.s("no_qr_found"))));
-        }
-      } else {
-        _onDetect(capture);
-      }
-    }
-  }
-
   void _showScanResult(String data) {
     final amountController = TextEditingController();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final name = _getPayeeName(data); // Define name here for transaction title
+    final name = _getPayeeName(data);
 
     showModalBottomSheet(
       context: context,
@@ -117,7 +95,7 @@ class _ScannerTabState extends State<ScannerTab> {
               ),
               const SizedBox(height: 20),
 
-              // Success check
+              // QR success icon
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -142,7 +120,7 @@ class _ScannerTabState extends State<ScannerTab> {
               ),
               const SizedBox(height: 8),
 
-              // Payee Info (Hidden raw UPI link)
+              // Payee info
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -228,7 +206,9 @@ class _ScannerTabState extends State<ScannerTab> {
                   onPressed: () async {
                     final amount = amountController.text.trim();
                     final amountDouble = double.tryParse(amount);
-                    if (amount.isEmpty || amountDouble == null) {
+                    if (amount.isEmpty ||
+                        amountDouble == null ||
+                        amountDouble <= 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
@@ -248,20 +228,16 @@ class _ScannerTabState extends State<ScannerTab> {
                     final user = FirebaseAuth.instance.currentUser;
                     if (user == null) return;
 
-                    // ─── Unified Multi-Step Payment Process ────────────────
-                    // 1. Show Confirmation Sheet (Rewards + Bank + Auth Choice)
+                    // 1. Confirmation sheet
                     final confirmation = await PaymentConfirmationSheet.show(
                       ctx,
                       user.uid,
                       amountDouble,
                     );
-
-                    if (confirmation == null)
-                      return; // Cancelled or Limit Failure inside sheet
-
+                    if (confirmation == null) return;
                     if (!ctx.mounted) return;
 
-                    // 2. Authentication Verification
+                    // 2. Authentication
                     bool verified = false;
                     final auth = AuthService();
                     final selectedBank = confirmation.bankAccount;
@@ -271,18 +247,28 @@ class _ScannerTabState extends State<ScannerTab> {
                         verified = true;
                         await auth.recordInstantPayUsage(amountDouble);
                       } else {
-                        // Explicitly fail as per user request
-                        Navigator.pop(ctx);
-                        _showPaymentSuccess(
-                          amount,
-                          "FAILED: Limit Exceeded",
-                        ); // Re-using dialog for simplicity
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        _showPaymentFailure('Instant Pay limit exceeded.');
                         return;
                       }
-                    } else if (confirmation.useBiometric) {
+                    } else if (confirmation.useBiometric ||
+                        auth.requiresBiometric(amountDouble)) {
                       verified = await auth.authenticateBiometrics();
+                      if (!verified && ctx.mounted) {
+                        // Fallback to PIN
+                        final result = await Navigator.push(
+                          ctx,
+                          MaterialPageRoute(
+                            builder: (_) => PinScreen(
+                              mode: PinMode.verifyBank,
+                              expectedBankPinHash: selectedBank.pinHash,
+                            ),
+                          ),
+                        );
+                        verified = result == true;
+                      }
                     } else {
-                      // Default: PIN Verification
+                      // Default: PIN
                       final result = await Navigator.push(
                         ctx,
                         MaterialPageRoute(
@@ -298,13 +284,14 @@ class _ScannerTabState extends State<ScannerTab> {
                     if (!verified) return;
                     if (!ctx.mounted) return;
 
-                    // 3. Deduct balance from the specific bank account
+                    // 3. Deduct balance
                     await FirestoreService().updateBankAccountBalance(
                       user.uid,
                       selectedBank.id,
                       -amountDouble,
                     );
 
+                    // 4. Record transaction
                     TransactionManager().addTransaction(
                       Transaction(
                         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -321,8 +308,10 @@ class _ScannerTabState extends State<ScannerTab> {
                     );
 
                     if (!ctx.mounted) return;
-
                     Navigator.pop(ctx);
+
+                    // 5. Award cashback & show result
+                    await RewardsService().awardCashback(amountDouble);
                     _showPaymentSuccess(amountController.text, data);
                   },
                   style: ElevatedButton.styleFrom(
@@ -379,6 +368,18 @@ class _ScannerTabState extends State<ScannerTab> {
     );
   }
 
+  void _showPaymentFailure(String reason) {
+    PaymentResultDialog.show(
+      context,
+      success: false,
+      title: 'Payment Failed',
+      subtitle: reason,
+      amount: '',
+      recipient: '',
+      onDone: () => _resetScanner(),
+    );
+  }
+
   void _resetScanner() {
     setState(() => _hasScanned = false);
     _controller.start();
@@ -406,46 +407,34 @@ class _ScannerTabState extends State<ScannerTab> {
             ),
           ),
 
-          // Top bar
+          // Top bar — centered title only
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      L10n.s("scan_any_qr"),
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
                   ),
-                  // Gallery pick button
-                  IconButton(
-                    onPressed: _pickImage,
-                    icon: const Icon(
-                      Icons.image_outlined,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    L10n.s("scan_any_qr"),
+                    style: GoogleFonts.poppins(
                       color: Colors.white,
-                      size: 26,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
 
-          // Scanning animation hint
+          // Scanning hint text
           if (!_hasScanned)
             Center(
               child: Column(
@@ -463,23 +452,22 @@ class _ScannerTabState extends State<ScannerTab> {
               ),
             ),
 
-          // Bottom Actions
+          // Bottom — torch toggle only
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 40),
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 50),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.transparent, Colors.black.withOpacity(0.9)],
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.85)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
               ),
               child: Column(
                 children: [
-                  // Flashlight toggle
                   ValueListenableBuilder<MobileScannerState>(
                     valueListenable: _controller,
                     builder: (context, state, child) {
@@ -487,11 +475,11 @@ class _ScannerTabState extends State<ScannerTab> {
                       return GestureDetector(
                         onTap: () => _controller.toggleTorch(),
                         child: Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: torchOn
-                                ? AppColors.primary.withOpacity(0.3)
+                                ? AppColors.primary.withOpacity(0.35)
                                 : Colors.white.withOpacity(0.15),
                           ),
                           child: Icon(
@@ -501,59 +489,19 @@ class _ScannerTabState extends State<ScannerTab> {
                             color: torchOn
                                 ? AppColors.primaryLight
                                 : Colors.white,
-                            size: 22,
+                            size: 26,
                           ),
                         ),
                       );
                     },
                   ),
-                  const SizedBox(height: 24),
-
-                  // Quick actions row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _quickAction(
-                        Icons.contacts,
-                        L10n.s("pay_contacts"),
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SendMoneyScreen(),
-                          ),
-                        ),
-                      ),
-                      _quickAction(
-                        Icons.phone_android,
-                        L10n.s("pay_phone_number"),
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SendMoneyScreen(),
-                          ),
-                        ),
-                      ),
-                      _quickAction(
-                        Icons.swap_horiz,
-                        L10n.s("self_transfer"),
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const WalletScreen(),
-                          ),
-                        ),
-                      ),
-                      _quickAction(
-                        Icons.account_balance,
-                        L10n.s("bank_transfer"),
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SendMoneyScreen(),
-                          ),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 8),
+                  Text(
+                    'Torch',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white60,
+                      fontSize: 11,
+                    ),
                   ),
                 ],
               ),
@@ -563,33 +511,11 @@ class _ScannerTabState extends State<ScannerTab> {
       ),
     );
   }
-
-  Widget _quickAction(IconData icon, String label, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: Colors.white, size: 22),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(color: Colors.white70, fontSize: 10),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-// Custom QR Scanner Overlay
+// ─────────────────────────────────────────────────────────────────────────────
+// Custom QR scanner overlay shape (semi-transparent overlay with a cutout)
+// ─────────────────────────────────────────────────────────────────────────────
 class QrScannerOverlayShape extends ShapeBorder {
   final Color borderColor;
   final double borderRadius;
@@ -658,7 +584,6 @@ class QrScannerOverlayShape extends ShapeBorder {
       backgroundPaint,
     );
 
-    // Corner brackets
     final double r = borderRadius;
     // Top Left
     canvas.drawRRect(
