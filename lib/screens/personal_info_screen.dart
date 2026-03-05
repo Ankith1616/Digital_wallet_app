@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../utils/theme_manager.dart';
 import '../utils/firestore_service.dart';
 import '../utils/storage_service.dart';
+import '../utils/budget_manager.dart';
 
 class PersonalInfoScreen extends StatefulWidget {
   const PersonalInfoScreen({super.key});
@@ -21,6 +22,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   final _phoneController = TextEditingController();
   final _dobController = TextEditingController();
   final _upiController = TextEditingController();
+  final _salaryController = TextEditingController();
   bool _isLoading = false;
   XFile? _pickedFile;
   String? _photoUrl;
@@ -45,6 +47,10 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       if (profile != null) {
         _phoneController.text = profile['phone'] ?? user.phoneNumber ?? '';
         _dobController.text = profile['dob'] ?? '';
+        final salary = (profile['salary'] as num?)?.toDouble() ?? 0;
+        if (salary > 0) {
+          _salaryController.text = salary.toInt().toString();
+        }
       }
 
       _upiController.text = "${user.email?.split('@').first ?? 'user'}@upi";
@@ -72,6 +78,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     _phoneController.dispose();
     _dobController.dispose();
     _upiController.dispose();
+    _salaryController.dispose();
     super.dispose();
   }
 
@@ -112,13 +119,31 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           await user.updatePhotoURL(newPhotoUrl);
         }
 
-        // 3. Update Firestore Document
+        // 3. Parse salary
+        final salaryValue = double.tryParse(
+          _salaryController.text.trim(),
+        ) ?? 0;
+
+        // 4. Update Firestore Document
         await _firestore.updateUserProfile(user.uid, {
           'name': _nameController.text,
           'phone': _phoneController.text,
           'dob': _dobController.text,
           'photoUrl': newPhotoUrl,
+          'salary': salaryValue,
         });
+
+        // 5. Update BudgetManager with salary
+        if (salaryValue > 0) {
+          final existing = BudgetManager().budgetData;
+          BudgetManager().updateBudget(
+            salary: salaryValue,
+            rent: existing?.rent ?? 0,
+            bills: existing?.bills ?? 0,
+            savingsGoal: existing?.savingsGoal ?? 5000,
+            categoryLimits: existing?.categoryLimits,
+          );
+        }
 
         // Refresh the user object
         await user.reload();
@@ -276,6 +301,15 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
               isDark,
               enabled: false,
             ),
+            const SizedBox(height: 14),
+            _infoField(
+              "Monthly Salary",
+              _salaryController,
+              Icons.currency_rupee,
+              isDark,
+              hint: "e.g. 50000",
+              keyboardType: TextInputType.number,
+            ),
 
             const SizedBox(height: 32),
 
@@ -323,6 +357,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     bool isDark, {
     bool enabled = true,
     String? hint,
+    TextInputType? keyboardType,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,6 +383,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           child: TextField(
             controller: controller,
             enabled: enabled,
+            keyboardType: keyboardType,
             style: GoogleFonts.poppins(
               fontSize: 14,
               color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(

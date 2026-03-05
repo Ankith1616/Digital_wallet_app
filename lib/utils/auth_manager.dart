@@ -223,6 +223,12 @@ class AuthService {
 
   /// Authenticate with detailed result for UI feedback
   Future<BiometricAuthResult> authenticateBiometricsDetailed() async {
+    // local_auth has no implementation on web
+    if (kIsWeb) {
+      return BiometricAuthResult.fail(
+        'Biometrics are not supported on web',
+      );
+    }
     try {
       bool isDeviceSupported = await _localAuth.isDeviceSupported();
       if (!isDeviceSupported) {
@@ -280,6 +286,11 @@ class AuthService {
         _ => 'Biometric error: ${e.message ?? e.code}',
       };
       return BiometricAuthResult.fail(msg);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Biometric unexpected error: $e');
+      }
+      return BiometricAuthResult.fail('Biometric error: $e');
     }
   }
 

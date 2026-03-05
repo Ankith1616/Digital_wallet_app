@@ -243,6 +243,7 @@ class FirestoreService {
           'iconFontFamily': tx.icon.fontFamily ?? 'MaterialIcons',
           'colorValue': tx.color.toARGB32(),
           'date': Timestamp.fromDate(tx.date),
+          if (tx.receiptUrl != null) 'receiptUrl': tx.receiptUrl,
         });
   }
 
@@ -253,7 +254,6 @@ class FirestoreService {
         .doc(uid)
         .collection('transactions')
         .orderBy('date', descending: true)
-        .limit(100)
         .snapshots()
         .map(
           (snap) => snap.docs.map((doc) {
@@ -274,6 +274,7 @@ class FirestoreService {
                 (c) => c.name == d['category'],
                 orElse: () => TransactionCategory.other,
               ),
+              receiptUrl: d['receiptUrl'] as String?,
             );
           }).toList(),
         );
@@ -286,7 +287,6 @@ class FirestoreService {
         .doc(uid)
         .collection('transactions')
         .orderBy('date', descending: true)
-        .limit(100)
         .get();
 
     return snap.docs.map((doc) {
@@ -307,6 +307,7 @@ class FirestoreService {
           (c) => c.name == d['category'],
           orElse: () => TransactionCategory.other,
         ),
+        receiptUrl: d['receiptUrl'] as String?,
       );
     }).toList();
   }

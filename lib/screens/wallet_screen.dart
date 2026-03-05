@@ -7,6 +7,7 @@ import '../models/bank_account.dart';
 import 'setup_screen.dart';
 import '../utils/auth_manager.dart';
 import 'pin_gate_screen.dart';
+import 'pin_screen.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -102,8 +103,7 @@ class _WalletScreenState extends State<WalletScreen> {
                         ),
                         onTap: () => _handleBankTap(
                           context,
-                          bank.bankName,
-                          "₹${bank.balance.toStringAsFixed(2)}",
+                          bank,
                         ),
                       );
                     }).toList(),
@@ -207,97 +207,26 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  void _handleBankTap(BuildContext context, String bankName, String balance) {
-    _showPinDialog(context, (isCorrect) {
-      if (isCorrect) {
-        _showBalanceDialog(context, bankName, balance);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Incorrect PIN. Please try again."),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-    });
-  }
+  Future<void> _handleBankTap(BuildContext context, BankAccount bank) async {
+    if (bank.pinHash.isEmpty) {
+      // No PIN set for this bank — show balance directly
+      _showBalanceDialog(context, bank.bankName, "₹${bank.balance.toStringAsFixed(2)}");
+      return;
+    }
 
-  void _showPinDialog(BuildContext context, Function(bool) onComplete) {
-    final pinController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: Text(
-          "Enter UPI PIN",
-          style: GoogleFonts.spaceGrotesk(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+    final verified = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PinScreen(
+          mode: PinMode.verifyBank,
+          expectedBankPinHash: bank.pinHash,
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "Please enter your secret 4-digit UPI PIN",
-              style: GoogleFonts.spaceGrotesk(
-                color: Colors.white70,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: pinController,
-              obscureText: true,
-              keyboardType: TextInputType.number,
-              maxLength: 4,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                letterSpacing: 10,
-              ),
-              textAlign: TextAlign.center,
-              decoration: const InputDecoration(
-                counterText: "",
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.deepPurpleAccent),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.deepPurpleAccent,
-                    width: 2,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              "CANCEL",
-              style: GoogleFonts.spaceGrotesk(color: Colors.grey),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final pin = pinController.text;
-              Navigator.pop(context);
-              final isCorrect = await AuthService().verifyPin(pin);
-              onComplete(isCorrect);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepPurpleAccent,
-            ),
-            child: Text(
-              "PROCEED",
-              style: GoogleFonts.spaceGrotesk(color: Colors.white),
-            ),
-          ),
-        ],
       ),
     );
+
+    if (verified == true && context.mounted) {
+      _showBalanceDialog(context, bank.bankName, "₹${bank.balance.toStringAsFixed(2)}");
+    }
   }
 
   void _showBalanceDialog(

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'firestore_service.dart';
 import '../firebase_options.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class FirebaseAuthService {
   static final FirebaseAuthService _instance = FirebaseAuthService._internal();
@@ -68,6 +69,56 @@ class FirebaseAuthService {
     return credential;
   }
 
+  /// Sign in with Google
+  Future<UserCredential?> signInWithGoogle() async {
+    try {
+      if (kIsWeb) {
+        // Web sign in
+        GoogleAuthProvider authProvider = GoogleAuthProvider();
+        final credential = await _auth.signInWithPopup(authProvider);
+        await _ensureFirestoreProfile(credential.user);
+        return credential;
+      } else {
+        // Mobile sign in using google_sign_in 7.x API
+        final googleUser = await GoogleSignIn.instance.authenticate();
+
+        final idToken = googleUser.authentication.idToken;
+
+        final AuthCredential credential = GoogleAuthProvider.credential(
+          idToken: idToken,
+        );
+
+        final userCredential = await _auth.signInWithCredential(credential);
+        await _ensureFirestoreProfile(userCredential.user);
+        return userCredential;
+      }
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        // The user canceled the sign-in
+        return null;
+      }
+      if (kDebugMode) print('[FirebaseAuthService] Google Sign-In error: $e');
+      rethrow;
+    } catch (e) {
+      if (kDebugMode) print('[FirebaseAuthService] Google Sign-In error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _ensureFirestoreProfile(User? user) async {
+    if (user != null) {
+      final existing = await FirestoreService().getUserProfile(user.uid);
+      if (existing == null) {
+        final name = user.displayName ?? user.email?.split('@').first ?? 'User';
+        await FirestoreService().createUserProfile(
+          uid: user.uid,
+          name: name,
+          email: user.email ?? '',
+        );
+      }
+    }
+  }
+
   // ─── Email OTP Two-Phase Auth ───────────────────────────────────────────────
 
   /// Phase 1 (Login): Validate credentials via REST API to avoid triggering
@@ -92,17 +143,27 @@ class FirebaseAuthService {
         }),
       );
 
-      final data = jsonDecode(res.body);
-      if (data['error'] != null) {
-        final msg = data['error']['message'] as String;
-        if (msg.contains('INVALID_LOGIN_CREDENTIALS') ||
-            msg.contains('INVALID_PASSWORD') ||
-            msg.contains('EMAIL_NOT_FOUND')) {
-          return 'Invalid email or password.';
-        } else if (msg.contains('USER_DISABLED')) {
-          return 'This account has been disabled.';
+      if (res.statusCode != 200) {
+        // Try to parse JSON error, fallback to generic message
+        try {
+          final data = jsonDecode(res.body);
+          if (data['error'] != null) {
+            final msg = data['error']['message'] as String;
+            if (msg.contains('INVALID_LOGIN_CREDENTIALS') ||
+                msg.contains('INVALID_PASSWORD') ||
+                msg.contains('EMAIL_NOT_FOUND')) {
+              return 'Invalid email or password.';
+            } else if (msg.contains('USER_DISABLED')) {
+              return 'This account has been disabled.';
+            } else if (msg.contains('TOO_MANY_ATTEMPTS_TRY_LATER')) {
+              return 'Too many attempts. Please try again later.';
+            }
+            return 'Login failed. Please try again.';
+          }
+        } catch (_) {
+          // Response was not JSON (HTML error page)
         }
-        return 'Login failed: $msg';
+        return 'Login failed. Please check your connection and try again.';
       }
       return null;
     } catch (e) {
@@ -136,26 +197,37 @@ class FirebaseAuthService {
         }),
       );
 
-      final data = jsonDecode(res.body);
-      if (data['error'] != null) {
-        final msg = data['error']['message'] as String;
-        if (msg.contains('EMAIL_EXISTS')) {
-          // Check if password matches to handle abandoned OTP flow
-          final loginCheck = await prepareLogin(
-            email: email,
-            password: password,
-          );
-          if (loginCheck == null) {
-            // Password matches, allow them to verify OTP again
-            return null;
+      if (res.statusCode != 200) {
+        try {
+          final data = jsonDecode(res.body);
+          if (data['error'] != null) {
+            final msg = data['error']['message'] as String;
+            if (msg.contains('EMAIL_EXISTS') ||
+                msg.contains('FEDERATED_USER_ID_ALREADY_LINKED')) {
+              // Check if password matches to handle abandoned OTP flow
+              final loginCheck = await prepareLogin(
+                email: email,
+                password: password,
+              );
+              if (loginCheck == null) {
+                return null;
+              }
+              return 'This email is already registered. Please go to Login instead.';
+            } else if (msg.contains('WEAK_PASSWORD')) {
+              return 'Password must be at least 6 characters.';
+            } else if (msg.contains('INVALID_EMAIL')) {
+              return 'Please enter a valid email address.';
+            } else if (msg.contains('ADMIN_ONLY_OPERATION') ||
+                msg.contains('OPERATION_NOT_ALLOWED')) {
+              return 'Email/password sign-up is not enabled. Contact support.';
+            } else if (msg.contains('TOO_MANY_ATTEMPTS_TRY_LATER')) {
+              return 'Too many attempts. Please try again later.';
+            }
           }
-          return 'This email is already registered. Please go to Login instead.';
-        } else if (msg.contains('WEAK_PASSWORD')) {
-          return 'Password must be at least 6 characters.';
-        } else if (msg.contains('INVALID_EMAIL')) {
-          return 'Please enter a valid email address.';
+        } catch (_) {
+          // Response was not JSON (HTML error page)
         }
-        return 'Sign-up failed: $msg';
+        return 'Sign-up failed. Please try again.';
       }
       return null;
     } catch (e) {
@@ -346,9 +418,99 @@ class FirebaseAuthService {
         return 'OTP has expired. Please request a new one.';
       case 'quota-exceeded':
         return 'SMS quota exceeded. Try again later.';
+      case 'invalid-credential':
+      case 'INVALID_LOGIN_CREDENTIALS':
+        return 'Invalid email or password.';
+      case 'channel-error':
+        return 'Please fill in all fields correctly.';
+      case 'missing-email':
+        return 'Please enter your email address.';
       default:
         if (kDebugMode) print('[Auth Error] ${e.code}: ${e.message}');
         return 'Something went wrong. Please try again.';
+    }
+  }
+
+  // ─── Forgot Password (REST API) ──────────────────────────────────────────
+
+  /// Send a password reset email via REST API.
+  /// Returns `null` on success, or an error message.
+  Future<String?> sendPasswordResetViaRest(String email) async {
+    try {
+      final apiKey = DefaultFirebaseOptions.currentPlatform.apiKey;
+      final url = Uri.parse(
+        'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=$apiKey',
+      );
+
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'requestType': 'PASSWORD_RESET',
+          'email': email,
+        }),
+      );
+
+      if (res.statusCode == 200) return null;
+
+      try {
+        final data = jsonDecode(res.body);
+        if (data['error'] != null) {
+          final msg = data['error']['message'] as String;
+          if (msg.contains('EMAIL_NOT_FOUND')) {
+            return 'No account found with this email.';
+          } else if (msg.contains('INVALID_EMAIL')) {
+            return 'Please enter a valid email address.';
+          } else if (msg.contains('TOO_MANY_ATTEMPTS_TRY_LATER')) {
+            return 'Too many attempts. Please try again later.';
+          }
+        }
+      } catch (_) {}
+      return 'Could not send reset email. Please try again.';
+    } catch (e) {
+      return 'Network error. Please try again.';
+    }
+  }
+
+  /// Confirm password reset using the oobCode from the email link.
+  /// Returns `null` on success, or an error message.
+  Future<String?> confirmPasswordResetViaRest({
+    required String oobCode,
+    required String newPassword,
+  }) async {
+    try {
+      final apiKey = DefaultFirebaseOptions.currentPlatform.apiKey;
+      final url = Uri.parse(
+        'https://identitytoolkit.googleapis.com/v1/accounts:resetPassword?key=$apiKey',
+      );
+
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'oobCode': oobCode,
+          'newPassword': newPassword,
+        }),
+      );
+
+      if (res.statusCode == 200) return null;
+
+      try {
+        final data = jsonDecode(res.body);
+        if (data['error'] != null) {
+          final msg = data['error']['message'] as String;
+          if (msg.contains('EXPIRED_OOB_CODE')) {
+            return 'This reset link has expired. Please request a new one.';
+          } else if (msg.contains('INVALID_OOB_CODE')) {
+            return 'Invalid reset code. Please check and try again.';
+          } else if (msg.contains('WEAK_PASSWORD')) {
+            return 'Password must be at least 6 characters.';
+          }
+        }
+      } catch (_) {}
+      return 'Password reset failed. Please try again.';
+    } catch (e) {
+      return 'Network error. Please try again.';
     }
   }
 }

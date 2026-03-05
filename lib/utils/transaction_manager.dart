@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,10 +14,35 @@ class TransactionManager extends ChangeNotifier {
   TransactionManager._internal();
 
   final List<Transaction> _transactions = [];
+  StreamSubscription? _firestoreSubscription;
 
   List<Transaction> get transactions => List.unmodifiable(_transactions);
   late final ValueNotifier<List<Transaction>> transactionsNotifier =
       ValueNotifier(_transactions);
+
+  /// Subscribe to real-time Firestore transaction updates.
+  /// Call once after user logs in (e.g. from MainLayout).
+  void startListeningToFirestore() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    _firestoreSubscription?.cancel();
+    _firestoreSubscription =
+        FirestoreService().transactionsStream(uid).listen((remote) {
+      _transactions
+        ..clear()
+        ..addAll(remote);
+      transactionsNotifier.value = List.from(_transactions);
+      notifyListeners();
+      WidgetHelper.updateWidgetSpending();
+    }, onError: (e) {
+      debugPrint('Firestore transaction stream error: $e');
+    });
+  }
+
+  void stopListening() {
+    _firestoreSubscription?.cancel();
+    _firestoreSubscription = null;
+  }
 
   void addTransaction(Transaction transaction) {
     _transactions.insert(0, transaction);
@@ -29,7 +55,9 @@ class TransactionManager extends ChangeNotifier {
     // Sync to Firestore if user is logged in
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
-      FirestoreService().addTransaction(uid, transaction);
+      FirestoreService().addTransaction(uid, transaction).catchError((e) {
+        debugPrint('Error saving transaction to Firestore: $e');
+      });
 
       // Trigger transaction notification
       _triggerTransactionNotification(uid, transaction);

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@android:color/white">
+
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Monthly Spending"
+        android:textSize="14sp"
+        android:textColor="#FF1B3B52"
+        android:textStyle="bold"
+        android:gravity="start" />
+
+    <TextView
+        android:id="@+id/widget_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="₹0"
+        android:textSize="24sp"
+        android:textColor="#FF00E5A0"
+        android:textStyle="bold"
+        android:layout_marginTop="4dp"
+        android:gravity="start" />
+
+    <ImageView
+        android:id="@+id/widget_chart_image"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:scaleType="fitCenter"
+        android:contentDescription="Spending chart" />
+
+</LinearLayout>

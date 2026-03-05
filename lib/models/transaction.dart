@@ -21,6 +21,7 @@ class Transaction {
   final Color color;
   final String details;
   final TransactionCategory category;
+  final String? receiptUrl;
 
   Transaction({
     required this.id,
@@ -32,6 +33,7 @@ class Transaction {
     required this.color,
     this.details = '',
     this.category = TransactionCategory.other,
+    this.receiptUrl,
   });
 
   String get formattedDate {
@@ -58,6 +60,7 @@ class Transaction {
       'colorValue': color.toARGB32(),
       'details': details,
       'category': category.name,
+      if (receiptUrl != null) 'receiptUrl': receiptUrl,
     };
   }
 }

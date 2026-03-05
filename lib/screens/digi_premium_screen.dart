@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/theme_manager.dart';
+import '../widgets/payment_confirmation_sheet.dart';
+import '../widgets/payment_result_dialog.dart';
+import '../utils/auth_manager.dart';
+import '../utils/firestore_service.dart';
+import 'pin_screen.dart';
 
 class DigiPremiumScreen extends StatelessWidget {
   const DigiPremiumScreen({super.key});
@@ -161,21 +168,26 @@ class DigiPremiumScreen extends StatelessWidget {
                             ],
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            'Upgrade',
-                            style: GoogleFonts.spaceGrotesk(
-                              color: const Color(0xFF6C3FE0),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                        GestureDetector(
+                          onTap: () {
+                            _showPlanSelection(context);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'Upgrade',
+                              style: GoogleFonts.spaceGrotesk(
+                                color: const Color(0xFF6C3FE0),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                         ),
@@ -233,36 +245,6 @@ class DigiPremiumScreen extends StatelessWidget {
 
                   const SizedBox(height: 28),
 
-                  // Coming soon
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: Colors.amber.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.info_outline,
-                          color: Colors.amber,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Digi Premium is coming soon! Stay tuned for launch offers.',
-                            style: GoogleFonts.spaceGrotesk(
-                              fontSize: 13,
-                              color: Colors.amber.shade800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 24),
                 ],
               ),
@@ -340,5 +322,207 @@ class DigiPremiumScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  void _showPlanSelection(BuildContext context) {
+    showModalBottomSheet<double>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkSurface : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Choose a Plan',
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _planTile(
+                context: ctx,
+                title: 'Monthly Plan',
+                price: '₹99 / month',
+                amount: 99.0,
+                isDark: isDark,
+              ),
+              const SizedBox(height: 16),
+              _planTile(
+                context: ctx,
+                title: 'Yearly Plan',
+                price: '₹799 / year (Save 33%)',
+                amount: 799.0,
+                isDark: isDark,
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
+    ).then((selectedAmount) {
+      if (selectedAmount != null && context.mounted) {
+        _processPremiumPayment(context, selectedAmount);
+      }
+    });
+  }
+
+  Widget _planTile({
+    required BuildContext context,
+    required String title,
+    required String price,
+    required double amount,
+    required bool isDark,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pop(context, amount); // close bottom sheet and return amount
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFF6C3FE0).withValues(alpha: 0.5),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.spaceGrotesk(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  price,
+                  style: GoogleFonts.spaceGrotesk(
+                    color: Colors.grey,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFF6C3FE0)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _processPremiumPayment(
+    BuildContext context,
+    double amount,
+  ) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final confirmation = await PaymentConfirmationSheet.show(
+      context,
+      user.uid,
+      amount,
+    );
+    if (confirmation == null) return;
+
+    if (!context.mounted) return;
+
+    final selectedBank = confirmation.bankAccount;
+    final auth = AuthService();
+    bool verified = false;
+
+    if (confirmation.useInstantPay) {
+      if (auth.canProcessInstantPay(amount)) {
+        verified = true;
+        await auth.recordInstantPayUsage(amount);
+      } else {
+        await PaymentResultDialog.show(
+          context,
+          success: false,
+          title: 'Payment Failed',
+          subtitle: 'Instant Pay limit exceeded.',
+          amount: amount.toStringAsFixed(2),
+          recipient: 'Digi Premium',
+        );
+        return;
+      }
+    } else if (confirmation.useBiometric) {
+      verified = await auth.authenticateBiometrics();
+      if (verified) await auth.recordBiometricUsage(amount);
+    } else {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PinScreen(
+            mode: PinMode.verifyBank,
+            expectedBankPinHash: selectedBank.pinHash,
+          ),
+        ),
+      );
+      verified = result == true;
+    }
+
+    if (!verified) return;
+    if (!context.mounted) return;
+
+    if (selectedBank.balance < amount) {
+      await PaymentResultDialog.show(
+        context,
+        success: false,
+        title: 'Insufficient Balance',
+        subtitle: 'Please choose another bank account.',
+        amount: amount.toStringAsFixed(2),
+        recipient: 'Digi Premium',
+      );
+      return;
+    }
+
+    // Deduct
+    await FirestoreService().updateBankAccountBalance(
+      user.uid,
+      selectedBank.id,
+      -amount,
+    );
+
+    // Save Premium state locally
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_premium', true);
+
+    if (!context.mounted) return;
+
+    await PaymentResultDialog.show(
+      context,
+      success: true,
+      title: 'Premium Activated!',
+      subtitle: 'Welcome to Digi Premium.',
+      amount: amount.toStringAsFixed(2),
+      recipient: 'Digi Premium',
+    );
+
+    if (!context.mounted) return;
+    Navigator.pop(context, true); // return to profile, mark as true
   }
 }

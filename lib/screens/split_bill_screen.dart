@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../utils/theme_manager.dart';
 import '../utils/transaction_manager.dart';
 import '../models/transaction.dart';
@@ -10,6 +13,17 @@ import '../widgets/payment_confirmation_sheet.dart';
 import '../utils/firestore_service.dart';
 import '../utils/rewards_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+const List<Color> _splitAvatarColors = [
+  Color(0xFF6C63FF),
+  Color(0xFFFF6584),
+  Color(0xFF43C59E),
+  Color(0xFFF7B731),
+  Color(0xFF45AAF2),
+  Color(0xFFFC5C65),
+  Color(0xFF26DE81),
+  Color(0xFFFD9644),
+];
 
 class SplitBillScreen extends StatefulWidget {
   final double? initialAmount;
@@ -23,6 +37,12 @@ class SplitBillScreen extends StatefulWidget {
 class _SplitBillScreenState extends State<SplitBillScreen> {
   late final TextEditingController _amountController;
   late final TextEditingController _noteController;
+  final TextEditingController _searchController = TextEditingController();
+
+  List<Map<String, dynamic>> _allContacts = [];
+  List<Map<String, dynamic>> _filteredContacts = [];
+  final Set<int> _selectedContactIndices = {};
+  bool _isLoadingContacts = true;
 
   @override
   void initState() {
@@ -31,11 +51,72 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
       text: widget.initialAmount?.toString() ?? "",
     );
     _noteController = TextEditingController(text: widget.initialNote ?? "");
+    _searchController.addListener(_onSearch);
+    _loadContacts();
   }
 
-  final List<Map<String, dynamic>> _allContacts = [];
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _amountController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
 
-  final Set<int> _selectedContactIndices = {};
+  Future<void> _loadContacts() async {
+    if (kIsWeb) {
+      setState(() => _isLoadingContacts = false);
+      return;
+    }
+    try {
+      final status = await Permission.contacts.status;
+      if (!status.isGranted) {
+        final result = await Permission.contacts.request();
+        if (!result.isGranted) {
+          if (mounted) setState(() => _isLoadingContacts = false);
+          return;
+        }
+      }
+      final contacts = await FlutterContacts.getContacts(
+        withProperties: true,
+        withPhoto: false,
+      );
+      final list = <Map<String, dynamic>>[];
+      for (final c in contacts) {
+        if (c.displayName.trim().isEmpty) continue;
+        final phone = c.phones.isNotEmpty ? c.phones.first.number : '';
+        final color = _splitAvatarColors[
+            c.displayName.codeUnitAt(0) % _splitAvatarColors.length];
+        list.add({
+          'name': c.displayName,
+          'phone': phone,
+          'color': color,
+        });
+      }
+      if (mounted) {
+        setState(() {
+          _allContacts = list;
+          _filteredContacts = list;
+          _isLoadingContacts = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load contacts for split: $e');
+      if (mounted) setState(() => _isLoadingContacts = false);
+    }
+  }
+
+  void _onSearch() {
+    final q = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredContacts = q.isEmpty
+          ? _allContacts
+          : _allContacts.where((c) {
+              return c['name'].toString().toLowerCase().contains(q) ||
+                  c['phone'].toString().contains(q);
+            }).toList();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -173,24 +254,69 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  // Search contacts
+                  Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      style: GoogleFonts.poppins(fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: 'Search contacts...',
+                        hintStyle:
+                            GoogleFonts.poppins(color: Colors.grey, fontSize: 14),
+                        prefixIcon: const Icon(Icons.search, size: 20, color: Colors.grey),
+                        border: InputBorder.none,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (_isLoadingContacts)
+                    const Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (_filteredContacts.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Center(
+                        child: Text(
+                          _allContacts.isEmpty
+                              ? 'No contacts found.\nPlease grant contacts permission.'
+                              : 'No matching contacts.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(color: Colors.grey),
+                        ),
+                      ),
+                    )
+                  else
                   ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _allContacts.length,
+                    itemCount: _filteredContacts.length,
                     separatorBuilder: (context, index) =>
                         const SizedBox(height: 8),
                     itemBuilder: (context, index) {
-                      final contact = _allContacts[index];
+                      final contact = _filteredContacts[index];
+                      // find the original index in _allContacts for selection tracking
+                      final origIndex = _allContacts.indexOf(contact);
                       final isSelected = _selectedContactIndices.contains(
-                        index,
+                        origIndex,
                       );
                       return InteractiveScale(
                         onTap: () {
                           setState(() {
                             if (isSelected) {
-                              _selectedContactIndices.remove(index);
+                              _selectedContactIndices.remove(origIndex);
                             } else {
-                              _selectedContactIndices.add(index);
+                              _selectedContactIndices.add(origIndex);
                             }
                           });
                         },

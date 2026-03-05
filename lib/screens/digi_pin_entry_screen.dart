@@ -5,29 +5,31 @@ import 'dart:math' as math;
 import '../utils/theme_manager.dart';
 import '../utils/auth_manager.dart';
 
-/// App lock screen — shown at launch when a Digi PIN is set.
-/// Must be verified before [MainLayout] is shown.
-/// On success, [onUnlocked] is called (navigates to MainLayout).
-class DigiPinLockScreen extends StatefulWidget {
-  final VoidCallback onUnlocked;
+enum DigiPinMode { create, verify }
 
-  const DigiPinLockScreen({super.key, required this.onUnlocked});
+/// Full-screen PIN entry for DigiPIN operations.
+///
+/// - [DigiPinMode.create]: Enter + confirm a new 4-digit PIN. Returns the PIN
+///   string via `Navigator.pop(context, pin)`.
+/// - [DigiPinMode.verify]: Verify the current DigiPIN. Returns `true` on
+///   success via `Navigator.pop(context, true)`.
+class DigiPinEntryScreen extends StatefulWidget {
+  final DigiPinMode mode;
+
+  const DigiPinEntryScreen({super.key, required this.mode});
 
   @override
-  State<DigiPinLockScreen> createState() => _DigiPinLockScreenState();
+  State<DigiPinEntryScreen> createState() => _DigiPinEntryScreenState();
 }
 
-class _DigiPinLockScreenState extends State<DigiPinLockScreen>
+class _DigiPinEntryScreenState extends State<DigiPinEntryScreen>
     with SingleTickerProviderStateMixin {
   final AuthService _auth = AuthService();
-
   String _pin = '';
-  static const int _maxAttempts = 5;
-  int _attempts = 0;
-  bool _locked = false;
+  String _firstPin = '';
+  bool _isConfirming = false;
   bool _isSuccess = false;
   String? _errorMsg;
-  bool _biometricAvailable = false;
 
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
@@ -36,36 +38,12 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
   void initState() {
     super.initState();
     _shakeController = AnimationController(
-      duration: const Duration(milliseconds: 400),
       vsync: this,
+      duration: const Duration(milliseconds: 400),
     );
     _shakeAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut),
     );
-    _initBiometric();
-  }
-
-  Future<void> _initBiometric() async {
-    await _auth.init();
-    if (_auth.isBiometricEnabled) {
-      if (mounted) setState(() => _biometricAvailable = true);
-      _authenticateBiometrics();
-    }
-  }
-
-  Future<void> _authenticateBiometrics() async {
-    if (!_auth.isBiometricEnabled) return;
-    try {
-      final success = await _auth.authenticateBiometrics();
-      if (success && mounted) {
-        setState(() => _isSuccess = true);
-        HapticFeedback.heavyImpact();
-        await Future.delayed(const Duration(milliseconds: 400));
-        if (mounted) widget.onUnlocked();
-      }
-    } catch (_) {
-      // Biometric failed or cancelled — user can enter PIN instead
-    }
   }
 
   @override
@@ -74,8 +52,24 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
     super.dispose();
   }
 
+  String get _title {
+    if (widget.mode == DigiPinMode.create) {
+      return _isConfirming ? 'Confirm Digi PIN' : 'Create Digi PIN';
+    }
+    return 'Enter Digi PIN';
+  }
+
+  String get _subtitle {
+    if (widget.mode == DigiPinMode.create) {
+      return _isConfirming
+          ? 'Re-enter your 4-digit PIN'
+          : 'Set a 4-digit PIN to secure your app';
+    }
+    return 'Enter your current PIN to continue';
+  }
+
   void _onDigitPress(String digit) {
-    if (_isSuccess || _locked || _pin.length >= 4) return;
+    if (_isSuccess || _pin.length >= 4) return;
     HapticFeedback.lightImpact();
     setState(() {
       _pin += digit;
@@ -84,7 +78,7 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
   }
 
   void _onDeletePress() {
-    if (_isSuccess || _locked || _pin.isEmpty) return;
+    if (_isSuccess || _pin.isEmpty) return;
     HapticFeedback.selectionClick();
     setState(() {
       _pin = _pin.substring(0, _pin.length - 1);
@@ -93,40 +87,50 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
   }
 
   Future<void> _handleSubmit() async {
-    if (_pin.length != 4 || _locked) return;
+    if (_pin.length != 4) return;
 
-    final correct = await _auth.verifyDigiPin(_pin);
-    if (!mounted) return;
-
-    if (correct) {
-      setState(() => _isSuccess = true);
-      HapticFeedback.heavyImpact();
-      await Future.delayed(const Duration(milliseconds: 400));
-      if (mounted) widget.onUnlocked();
+    if (widget.mode == DigiPinMode.verify) {
+      final ok = await _auth.verifyDigiPin(_pin);
+      if (ok) {
+        setState(() => _isSuccess = true);
+        HapticFeedback.heavyImpact();
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) Navigator.pop(context, true);
+      } else {
+        _showShake('Incorrect PIN');
+      }
     } else {
-      _attempts++;
-      if (_attempts >= _maxAttempts) {
-        setState(() {
-          _locked = true;
-          _errorMsg = 'Too many attempts. Please sign in again.';
-          _pin = '';
-        });
-        _shakeController.forward(from: 0);
-        HapticFeedback.vibrate();
-        await Future.delayed(const Duration(seconds: 2));
-        if (mounted) {
-          Navigator.of(context).popUntil((r) => r.isFirst);
+      // Create mode
+      if (_isConfirming) {
+        if (_pin == _firstPin) {
+          setState(() => _isSuccess = true);
+          HapticFeedback.heavyImpact();
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (mounted) Navigator.pop(context, _pin);
+        } else {
+          _showShake('PINs do not match');
+          setState(() {
+            _isConfirming = false;
+            _firstPin = '';
+          });
         }
       } else {
-        HapticFeedback.vibrate();
         setState(() {
+          _firstPin = _pin;
           _pin = '';
-          _errorMsg =
-              'Incorrect PIN. ${_maxAttempts - _attempts} attempt(s) remaining.';
+          _isConfirming = true;
         });
-        _shakeController.forward(from: 0);
       }
     }
+  }
+
+  void _showShake(String message) {
+    HapticFeedback.vibrate();
+    setState(() {
+      _pin = '';
+      _errorMsg = message;
+    });
+    _shakeController.forward(from: 0);
   }
 
   @override
@@ -178,7 +182,21 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
             child: SafeArea(
               child: Column(
                 children: [
-                  const SizedBox(height: 16),
+                  // Back button
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ),
+
                   const Spacer(flex: 2),
 
                   // Lock icon
@@ -205,7 +223,7 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
                   const SizedBox(height: 24),
 
                   Text(
-                    'Enter Digi PIN',
+                    _title,
                     style: GoogleFonts.spaceGrotesk(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
@@ -214,7 +232,7 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Enter your 4-digit PIN to unlock',
+                    _subtitle,
                     style: GoogleFonts.spaceGrotesk(
                       fontSize: 14,
                       color: Colors.grey,
@@ -281,7 +299,6 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
                     const SizedBox(height: 16),
                     Text(
                       _errorMsg!,
-                      textAlign: TextAlign.center,
                       style: GoogleFonts.spaceGrotesk(
                         fontSize: 13,
                         color: Colors.red.shade300,
@@ -302,11 +319,7 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
                         const SizedBox(height: 16),
                         _buildKeyRow(['7', '8', '9'], isDark),
                         const SizedBox(height: 16),
-                        _buildKeyRow([
-                          _biometricAvailable ? 'bio' : 'del',
-                          '0',
-                          '✓',
-                        ], isDark),
+                        _buildKeyRow(['del', '0', '✓'], isDark),
                       ],
                     ),
                   ),
@@ -329,7 +342,6 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
 
   Widget _buildKey(String key, bool isDark) {
     final isDelete = key == 'del';
-    final isBio = key == 'bio';
     final isConfirm = key == '✓';
     final isConfirmEnabled = isConfirm && _pin.length == 4;
 
@@ -343,7 +355,7 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
               ? Colors.white.withValues(alpha: 0.06)
               : Colors.grey.shade100);
       glowColor = isConfirmEnabled ? AppColors.primary : null;
-    } else if (isDelete || isBio) {
+    } else if (isDelete) {
       bgColor = isDark
           ? Colors.white.withValues(alpha: 0.06)
           : Colors.grey.shade100;
@@ -352,22 +364,17 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
     }
 
     return GestureDetector(
-      onTap: _isSuccess || _locked
+      onTap: _isSuccess
           ? null
           : () {
               if (isDelete) {
                 _onDeletePress();
-              } else if (isBio) {
-                _authenticateBiometrics();
               } else if (isConfirm) {
                 if (isConfirmEnabled) _handleSubmit();
               } else {
                 _onDigitPress(key);
               }
             },
-      onLongPress: isBio
-          ? () => _onDeletePress()
-          : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
@@ -406,30 +413,22 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
                   color: isDark ? Colors.white70 : Colors.black54,
                   size: 22,
                 )
-              : isBio
+              : isConfirm
                   ? Icon(
-                      Icons.fingerprint,
-                      color: AppColors.primary,
-                      size: 28,
+                      Icons.check_rounded,
+                      color: isConfirmEnabled
+                          ? Colors.white
+                          : (isDark ? Colors.white24 : Colors.grey.shade400),
+                      size: 26,
                     )
-                  : isConfirm
-                      ? Icon(
-                          Icons.check_rounded,
-                          color: isConfirmEnabled
-                              ? Colors.white
-                              : (isDark
-                                  ? Colors.white24
-                                  : Colors.grey.shade400),
-                          size: 26,
-                        )
-                      : Text(
-                          key,
-                          style: GoogleFonts.spaceGrotesk(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white : Colors.black87,
-                          ),
-                        ),
+                  : Text(
+                      key,
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
         ),
       ),
     );

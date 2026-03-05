@@ -345,6 +345,15 @@ class _LoginScreenState extends State<LoginScreen>
                     'Continue with Biometrics',
                     onTap: () => _handleBiometricLogin(),
                   ),
+                  const SizedBox(height: 14),
+
+                  // Google Sign In button
+                  _socialButton(
+                    Icons.g_mobiledata_rounded,
+                    'Continue with Google',
+                    iconSize: 32,
+                    onTap: () => _handleGoogleSignIn(),
+                  ),
                 ],
               ),
             ),
@@ -684,6 +693,7 @@ class _LoginScreenState extends State<LoginScreen>
     IconData icon,
     String label, {
     required VoidCallback onTap,
+    double iconSize = 22,
   }) {
     return InteractiveScale(
       onTap: onTap,
@@ -698,7 +708,7 @@ class _LoginScreenState extends State<LoginScreen>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white70, size: 22),
+            Icon(icon, color: Colors.white70, size: iconSize),
             const SizedBox(width: 10),
             Text(
               label,
@@ -720,12 +730,218 @@ class _LoginScreenState extends State<LoginScreen>
       _showError('Enter your email above first.');
       return;
     }
-    try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      _showSuccess('Password reset email sent to $email');
-    } on FirebaseAuthException catch (e) {
-      _showError(FirebaseAuthService.friendlyError(e));
+
+    final emailRegex = RegExp(r'^[\w.+-]+@[\w-]+\.[\w.]+$');
+    if (!emailRegex.hasMatch(email)) {
+      _showError('Please enter a valid email address.');
+      return;
     }
+
+    setState(() => _loading = true);
+    try {
+      final error =
+          await FirebaseAuthService().sendPasswordResetViaRest(email);
+      if (!mounted) return;
+
+      if (error != null) {
+        _showError(error);
+        return;
+      }
+
+      _showSuccess('Password reset email sent!');
+      _showResetCodeDialog(email);
+    } catch (e) {
+      if (mounted) {
+        _showError('Could not send reset email. Please try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Shows a bottom sheet where users enter the reset code from the email
+  /// link and their new password, completing the reset entirely in-app.
+  void _showResetCodeDialog(String email) {
+    final codeCtrl = TextEditingController();
+    final passwordCtrl = TextEditingController();
+    String? errorMsg;
+    bool resetting = false;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          Future<void> doReset() async {
+            var code = codeCtrl.text.trim();
+            final newPwd = passwordCtrl.text;
+
+            if (code.isEmpty || newPwd.isEmpty) {
+              setSheetState(
+                  () => errorMsg = 'Please fill in both fields.');
+              return;
+            }
+            if (newPwd.length < 6) {
+              setSheetState(
+                  () => errorMsg = 'Password must be at least 6 characters.');
+              return;
+            }
+
+            // If user pasted a full URL, extract the oobCode parameter
+            if (code.contains('oobCode=')) {
+              final uri = Uri.tryParse(code);
+              if (uri != null && uri.queryParameters.containsKey('oobCode')) {
+                code = uri.queryParameters['oobCode']!;
+              } else {
+                final match = RegExp(r'oobCode=([^&]+)').firstMatch(code);
+                if (match != null) code = match.group(1)!;
+              }
+            }
+
+            setSheetState(() {
+              resetting = true;
+              errorMsg = null;
+            });
+
+            final result =
+                await FirebaseAuthService().confirmPasswordResetViaRest(
+              oobCode: code,
+              newPassword: newPwd,
+            );
+
+            if (!ctx.mounted) return;
+
+            if (result != null) {
+              setSheetState(() {
+                resetting = false;
+                errorMsg = result;
+              });
+            } else {
+              Navigator.pop(ctx);
+              _showSuccess('Password reset successful! You can now log in.');
+            }
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Reset Password',
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'We sent a reset link to $email.\nOpen the email, long-press the link to copy it, and paste the full link or just the code below.',
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 13,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: codeCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Reset Code or Link',
+                      hintText: 'Paste the link or code from email',
+                      labelStyle: GoogleFonts.spaceGrotesk(),
+                      hintStyle: GoogleFonts.spaceGrotesk(
+                          color: Colors.grey[400], fontSize: 13),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                      prefixIcon: const Icon(Icons.key),
+                    ),
+                    style: GoogleFonts.spaceGrotesk(),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: passwordCtrl,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'New Password',
+                      hintText: 'At least 6 characters',
+                      labelStyle: GoogleFonts.spaceGrotesk(),
+                      hintStyle: GoogleFonts.spaceGrotesk(
+                          color: Colors.grey[400], fontSize: 13),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                      prefixIcon: const Icon(Icons.lock_outline),
+                    ),
+                    style: GoogleFonts.spaceGrotesk(),
+                  ),
+                  if (errorMsg != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      errorMsg!,
+                      style: GoogleFonts.spaceGrotesk(
+                          color: Colors.redAccent, fontSize: 13),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: resetting ? null : doReset,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: resetting
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2),
+                            )
+                          : Text(
+                              'Reset Password',
+                              style: GoogleFonts.spaceGrotesk(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _handleBiometricLogin() async {
@@ -772,6 +988,26 @@ class _LoginScreenState extends State<LoginScreen>
       }
     } catch (e) {
       _showError('Biometric login failed: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _loading = true);
+    try {
+      final userCredential = await FirebaseAuthService().signInWithGoogle();
+      if (userCredential != null) {
+        final uid = userCredential.user?.uid;
+        if (uid != null) {
+          await FirebaseNotificationService().init(uid: uid);
+        }
+        if (mounted) _showSuccess('Google Sign-In successful!');
+      } else {
+        if (mounted) _showError('Google Sign-In was cancelled.');
+      }
+    } catch (e) {
+      if (mounted) _showError('Google Sign-In failed: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

@@ -9,6 +9,7 @@ import '../utils/theme_manager.dart';
 import '../models/transaction.dart';
 import '../utils/transaction_manager.dart';
 import '../utils/localization_helper.dart';
+import 'split_bill_screen.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   final bool showAppBar;
@@ -827,7 +828,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {}, // Detail view could be added here
+          onTap: () => _showTransactionDetail(t, isDark),
           borderRadius: BorderRadius.circular(18),
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -909,6 +910,232 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showTransactionDetail(Transaction t, bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _TransactionDetailSheet(transaction: t),
+    );
+  }
+}
+
+/// Bottom sheet that shows full transaction details, receipt image, and split action.
+class _TransactionDetailSheet extends StatelessWidget {
+  final Transaction transaction;
+  const _TransactionDetailSheet({required this.transaction});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = transaction;
+    final dateFormatted = DateFormat('dd MMM yyyy, hh:mm a').format(t.date);
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.65,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      builder: (_, scrollController) => Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
+            // Icon + Amount
+            Center(
+              child: Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: t.color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Icon(t.icon, color: t.color, size: 32),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: Text(
+                t.formattedAmount,
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  color: t.isPositive ? Colors.green : (isDark ? Colors.white : Colors.black87),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: t.isPositive
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  t.isPositive ? 'RECEIVED' : 'SENT',
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: t.isPositive ? Colors.green : Colors.red,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Detail rows
+            _detailRow('Title', t.title, isDark),
+            _detailRow('Date', dateFormatted, isDark),
+            _detailRow('Category', t.category.name[0].toUpperCase() + t.category.name.substring(1), isDark),
+            if (t.details.isNotEmpty)
+              _detailRow('Details', t.details, isDark),
+            _detailRow('Transaction ID', t.id, isDark),
+
+            // Receipt image
+            if (t.receiptUrl != null && t.receiptUrl!.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text(
+                'RECEIPT',
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey,
+                  letterSpacing: 1,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Image.network(
+                  t.receiptUrl!,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (_, child, progress) {
+                    if (progress == null) return child;
+                    return Container(
+                      height: 180,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const CircularProgressIndicator(),
+                    );
+                  },
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 100,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.broken_image_rounded, color: Colors.grey[400], size: 32),
+                        const SizedBox(height: 4),
+                        Text('Could not load receipt', style: GoogleFonts.spaceGrotesk(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 28),
+
+            // Split button
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SplitBillScreen(
+                        initialAmount: t.amount,
+                        initialNote: t.title,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.call_split_rounded),
+                label: Text(
+                  'Split This Amount',
+                  style: GoogleFonts.spaceGrotesk(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

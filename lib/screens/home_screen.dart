@@ -1069,6 +1069,7 @@ class _StatsTabState extends State<StatsTab> {
   }
 
   Future<void> _captureWidgetImage() async {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
     try {
       // Small delay to ensure chart is fully rendered
       await Future.delayed(const Duration(milliseconds: 500));
@@ -1121,7 +1122,7 @@ class _StatsTabState extends State<StatsTab> {
         builder: (context, allTransactions, _) {
           final transactions = _getFilteredTransactions(allTransactions);
           final now = DateTime.now();
-          final currentIncome = TransactionManager().getMonthlyIncome(
+          final txIncome = TransactionManager().getMonthlyIncome(
             now.month,
             now.year,
           );
@@ -1129,6 +1130,12 @@ class _StatsTabState extends State<StatsTab> {
             now.month,
             now.year,
           );
+
+          // Use salary from BudgetManager as income baseline;
+          // fall back to transaction income if salary isn't set.
+          final budget = BudgetManager().budgetData;
+          final salary = budget?.salary ?? 0;
+          final currentIncome = salary > 0 ? salary : txIncome;
 
           final prevMonth = now.month == 1 ? 12 : now.month - 1;
           final prevYear = now.month == 1 ? now.year - 1 : now.year;
@@ -1141,7 +1148,9 @@ class _StatsTabState extends State<StatsTab> {
             prevYear,
           );
 
-          final avgIncome = TransactionManager().getAverageMonthlyIncome();
+          final avgIncome = salary > 0
+              ? salary
+              : TransactionManager().getAverageMonthlyIncome();
           final avgExpense = TransactionManager().getAverageMonthlyExpense();
 
           final incomeTrend = prevIncome > 0
@@ -1151,7 +1160,6 @@ class _StatsTabState extends State<StatsTab> {
               ? "${((currentExpense - prevExpense) / prevExpense * 100).toStringAsFixed(0)}%"
               : null;
 
-          final budget = BudgetManager().budgetData;
           final savingsGoal = budget?.savingsGoal ?? 5000.0;
           final savedSoFar = currentIncome - currentExpense.abs();
 
@@ -1923,8 +1931,52 @@ class _StatsTabState extends State<StatsTab> {
     return spots;
   }
 
+  String _formatYLabel(double value) {
+    if (value >= 100) {
+      return '${value.toInt()}K';
+    } else if (value >= 1) {
+      // Show one decimal for values like 1.5K
+      final s = value.toStringAsFixed(1);
+      return '${s.endsWith('.0') ? value.toInt().toString() : s}K';
+    } else if (value == 0) {
+      return '0';
+    } else {
+      // Sub-1K: show as hundreds, e.g. 0.5 → "500"
+      return '${(value * 1000).toInt()}';
+    }
+  }
+
   Widget _buildMainLineChart(List<Transaction> transactions, bool isDark) {
     final labels = _getChartLabels();
+    final incomeSpots = _getChartSpots(transactions, true);
+    final expenseSpots = _getChartSpots(transactions, false);
+
+    // Determine maxY from actual data
+    double dataMax = 0;
+    for (final s in incomeSpots) {
+      if (s.y > dataMax) dataMax = s.y;
+    }
+    for (final s in expenseSpots) {
+      if (s.y > dataMax) dataMax = s.y;
+    }
+    // Add 20% headroom, minimum 1
+    double maxY = dataMax > 0 ? (dataMax * 1.2).ceilToDouble() : 1;
+    // Pick a nice interval (aim for ~4-5 grid lines)
+    double interval;
+    if (maxY <= 1) {
+      interval = 0.25;
+    } else if (maxY <= 5) {
+      interval = 1;
+    } else if (maxY <= 20) {
+      interval = 5;
+    } else if (maxY <= 50) {
+      interval = 10;
+    } else {
+      interval = (maxY / 5).ceilToDouble();
+    }
+    // Snap maxY to the next interval boundary
+    maxY = (maxY / interval).ceilToDouble() * interval;
+
     return RepaintBoundary(
       key: _chartKey,
       child: Container(
@@ -1960,6 +2012,7 @@ class _StatsTabState extends State<StatsTab> {
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: false,
+                    horizontalInterval: interval,
                     getDrawingHorizontalLine: (value) => FlLine(
                       color: Colors.grey.withValues(alpha: 0.1),
                       strokeWidth: 1,
@@ -1975,14 +2028,21 @@ class _StatsTabState extends State<StatsTab> {
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 30,
-                        getTitlesWidget: (value, meta) => Text(
-                          "${value.toInt()}K",
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 10,
-                          ),
-                        ),
+                        reservedSize: 40,
+                        interval: interval,
+                        getTitlesWidget: (value, meta) {
+                          // Skip the very top label if it overlaps
+                          if (value == meta.max) {
+                            return const SizedBox.shrink();
+                          }
+                          return Text(
+                            _formatYLabel(value),
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 10,
+                            ),
+                          );
+                        },
                       ),
                     ),
                     bottomTitles: AxisTitles(
@@ -2012,10 +2072,12 @@ class _StatsTabState extends State<StatsTab> {
                   ),
                   minX: 0,
                   maxX: (labels.length - 1).toDouble(),
+                  minY: 0,
+                  maxY: maxY,
                   borderData: FlBorderData(show: false),
                   lineBarsData: [
                     LineChartBarData(
-                      spots: _getChartSpots(transactions, true),
+                      spots: incomeSpots,
                       isCurved: true,
                       color: const Color(0xFF00E5A0),
                       barWidth: 3,
@@ -2026,7 +2088,7 @@ class _StatsTabState extends State<StatsTab> {
                       ),
                     ),
                     LineChartBarData(
-                      spots: _getChartSpots(transactions, false),
+                      spots: expenseSpots,
                       isCurved: true,
                       color: const Color(0xFF6EE9FF),
                       barWidth: 3,
@@ -2123,23 +2185,36 @@ class _StatsTabState extends State<StatsTab> {
                 ),
                 if (trend != null) ...[
                   const SizedBox(width: 6),
-                  const Icon(
-                    Icons.arrow_upward,
-                    size: 12,
-                    color: Color(0xFF00E5A0),
-                  ),
-                  Flexible(
-                    child: Text(
-                      trend,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: const Color(0xFF00E5A0),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                  () {
+                    final isNegative = trend.startsWith('-');
+                    final trendColor = isNegative
+                        ? Colors.redAccent
+                        : const Color(0xFF00E5A0);
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isNegative
+                              ? Icons.arrow_downward
+                              : Icons.arrow_upward,
+                          size: 12,
+                          color: trendColor,
+                        ),
+                        Flexible(
+                          child: Text(
+                            trend,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: trendColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }(),
                 ],
               ],
             ),
@@ -2251,20 +2326,28 @@ class _StatsTabState extends State<StatsTab> {
             ],
           ),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              const Icon(
-                Icons.arrow_upward,
-                size: 14,
-                color: Color(0xFF00E5A0),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                trend,
-                style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
-              ),
-            ],
-          ),
+          () {
+            final isTrendNegative = trend.startsWith('-');
+            return Row(
+              children: [
+                Icon(
+                  isTrendNegative
+                      ? Icons.arrow_downward
+                      : Icons.arrow_upward,
+                  size: 14,
+                  color: isTrendNegative
+                      ? Colors.redAccent
+                      : const Color(0xFF00E5A0),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  trend,
+                  style:
+                      GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
+                ),
+              ],
+            );
+          }(),
           const SizedBox(height: 24),
         ],
       ),

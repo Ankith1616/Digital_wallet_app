@@ -1,16 +1,21 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'service_page_template.dart';
+import 'travel_booking_template.dart';
+import '../../models/transaction.dart';
 
 class HotelsPage extends StatelessWidget {
   const HotelsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const ServicePageTemplate(
+    return TravelBookingTemplate(
       title: 'Book Hotel',
       icon: Icons.hotel,
-      themeColor: Color(0xFF6A1B9A),
-      fields: [
+      themeColor: const Color(0xFF6A1B9A),
+      searchButtonLabel: 'Search Hotels',
+      category: TransactionCategory.other,
+      fields: const [
         ServiceField(
           label: 'City / Location',
           hint: 'Where are you going?',
@@ -32,7 +37,38 @@ class HotelsPage extends StatelessWidget {
           icon: Icons.people,
         ),
       ],
-      buttonLabel: 'Search Hotels',
+      resultGenerator: (fields) {
+        final city = fields['City / Location'] ?? 'City';
+        final rng = Random();
+        final hotels = [
+          'Taj Hotel',
+          'OYO Rooms',
+          'Radisson Blu',
+          'Lemon Tree',
+          'Treebo Trend',
+          'FabHotel Prime',
+        ];
+        final amenities = [
+          ['Wi-Fi', 'Pool'],
+          ['Breakfast'],
+          ['Wi-Fi', 'Gym'],
+          ['Parking'],
+          ['AC', 'Wi-Fi'],
+          ['Breakfast', 'AC'],
+        ];
+        hotels.shuffle(rng);
+        return List.generate(min(5, hotels.length), (i) {
+          final price = 1200 + rng.nextInt(4800);
+          return BookingResult(
+            title: hotels[i],
+            subtitle: city,
+            duration: 'per night',
+            price: price.toDouble(),
+            rating: 3.0 + rng.nextDouble() * 2.0,
+            tags: amenities[i % amenities.length],
+          );
+        });
+      },
     );
   }
 }

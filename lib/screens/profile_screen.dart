@@ -14,9 +14,11 @@ import 'help_support_screen.dart';
 import 'about_screen.dart';
 import 'autopay_management_screen.dart';
 import 'digi_premium_screen.dart';
+import 'digi_pin_settings_screen.dart';
 import '../widgets/interactive_scale.dart';
 import '../utils/locale_manager.dart';
 import '../utils/localization_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Used for direct navigation (Push)
 class ProfileScreen extends StatelessWidget {
@@ -50,6 +52,22 @@ class ProfileTab extends StatefulWidget {
 
 class _ProfileTabState extends State<ProfileTab> {
   bool _isUploadingProfilePic = false;
+  bool _isPremiumEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPremiumStatus();
+  }
+
+  Future<void> _checkPremiumStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _isPremiumEnabled = prefs.getBool('is_premium') ?? false;
+      });
+    }
+  }
 
   Future<void> _pickAndUploadImage() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -218,24 +236,25 @@ class _ProfileTabState extends State<ProfileTab> {
                           ],
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: AppColors.goldGradient,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          "⭐ Gold",
-                          style: GoogleFonts.spaceGrotesk(
-                            color: const Color(0xFF3D2700),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                      if (_isPremiumEnabled)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: AppColors.goldGradient,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            "⭐ Gold",
+                            style: GoogleFonts.spaceGrotesk(
+                              color: const Color(0xFF3D2700),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 );
@@ -295,6 +314,14 @@ class _ProfileTabState extends State<ProfileTab> {
               L10n.s("notifications"),
               const Color(0xFFFF8C42),
               const NotificationSettingsScreen(),
+              isDark,
+            ),
+            _settingsTile(
+              context,
+              Icons.lock_rounded,
+              'Digi PIN & Security',
+              const Color(0xFF00E676),
+              const DigiPinSettingsScreen(),
               isDark,
             ),
             _settingsTile(
@@ -411,9 +438,15 @@ class _ProfileTabState extends State<ProfileTab> {
     bool isDark,
   ) {
     return InteractiveScale(
-      onTap: () {
+      onTap: () async {
         if (dest != null) {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => dest));
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => dest),
+          );
+          if (result == true) {
+            _checkPremiumStatus();
+          }
         } else {
           ScaffoldMessenger.of(
             context,

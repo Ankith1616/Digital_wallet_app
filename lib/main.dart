@@ -17,13 +17,22 @@ import 'services/firebase_notification_service.dart';
 import 'utils/locale_manager.dart';
 import 'utils/auth_manager.dart';
 import 'utils/localization_helper.dart';
+import 'utils/transaction_manager.dart';
+import 'utils/budget_manager.dart';
+import 'utils/firestore_service.dart';
 import 'package:provider/provider.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'features/notifications/notification_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FirebaseNotificationService.registerBackgroundHandler();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (!kIsWeb) {
+    await GoogleSignIn.instance.initialize(
+      serverClientId: '947462306422-fdu5r1jcufda4h2ql979asu4btpdff4s.apps.googleusercontent.com',
+    );
+  }
   await LocaleManager().init();
   await AuthService().init();
   runApp(
@@ -134,6 +143,14 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   void initState() {
     super.initState();
+
+    // Hydrate transactions from Firestore & subscribe to real-time updates
+    TransactionManager().loadFromFirestore();
+    TransactionManager().startListeningToFirestore();
+
+    // Load user salary into BudgetManager
+    _loadUserSalary();
+
     if (!kIsWeb) {
       // Listen for taps on the home screen widget and switch to Insights tab
       _widgetClickSubscription = HomeWidget.widgetClicked.listen((uri) {
@@ -146,9 +163,29 @@ class _MainLayoutState extends State<MainLayout> {
     }
   }
 
+  Future<void> _loadUserSalary() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final profile = await FirestoreService().getUserProfile(uid);
+    if (profile != null) {
+      final salary = (profile['salary'] as num?)?.toDouble() ?? 0;
+      if (salary > 0) {
+        final existing = BudgetManager().budgetData;
+        BudgetManager().updateBudget(
+          salary: salary,
+          rent: existing?.rent ?? 0,
+          bills: existing?.bills ?? 0,
+          savingsGoal: existing?.savingsGoal ?? 5000,
+          categoryLimits: existing?.categoryLimits,
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _widgetClickSubscription?.cancel();
+    TransactionManager().stopListening();
     super.dispose();
   }
 
