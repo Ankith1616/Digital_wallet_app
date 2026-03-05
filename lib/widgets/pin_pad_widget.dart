@@ -136,10 +136,7 @@ class PinPadWidgetState extends State<PinPadWidget>
             final offset = _shakeController.isAnimating
                 ? math.sin(_shakeAnimation.value * math.pi * 6) * 12
                 : 0.0;
-            return Transform.translate(
-              offset: Offset(offset, 0),
-              child: child,
-            );
+            return Transform.translate(offset: Offset(offset, 0), child: child);
           },
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -163,15 +160,16 @@ class PinPadWidgetState extends State<PinPadWidget>
                   color: filled || _isSuccess
                       ? null
                       : (isDark
-                            ? Colors.white.withOpacity(0.15)
+                            ? Colors.white.withValues(alpha: 0.15)
                             : Colors.grey.shade200),
                   boxShadow: filled || _isSuccess
                       ? [
                           BoxShadow(
-                            color: (_isSuccess
-                                    ? AppColors.success
-                                    : AppColors.primary)
-                                .withOpacity(0.45),
+                            color:
+                                (_isSuccess
+                                        ? AppColors.success
+                                        : AppColors.primary)
+                                    .withValues(alpha: 0.45),
                             blurRadius: 8,
                             spreadRadius: 1,
                           ),
@@ -255,12 +253,16 @@ class PinPadWidgetState extends State<PinPadWidget>
     if (isConfirm) {
       bgColor = confirmEnabled
           ? AppColors.primary
-          : (isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade100);
+          : (isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.grey.shade100);
       glowColor = confirmEnabled ? AppColors.primary : null;
     } else if (isDelete) {
-      bgColor = isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade100;
+      bgColor = isDark
+          ? Colors.white.withValues(alpha: 0.06)
+          : Colors.grey.shade100;
     } else {
-      bgColor = isDark ? Colors.white.withOpacity(0.08) : Colors.white;
+      bgColor = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white;
     }
 
     return GestureDetector(
@@ -281,7 +283,7 @@ class PinPadWidgetState extends State<PinPadWidget>
           boxShadow: glowColor != null
               ? [
                   BoxShadow(
-                    color: glowColor.withOpacity(0.42),
+                    color: glowColor.withValues(alpha: 0.42),
                     blurRadius: 16,
                     spreadRadius: 2,
                   ),
@@ -289,15 +291,15 @@ class PinPadWidgetState extends State<PinPadWidget>
               : [
                   if (!isDark)
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
                 ],
           border: Border.all(
             color: isDark
-                ? Colors.white.withOpacity(0.08)
-                : Colors.grey.withOpacity(0.12),
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.grey.withValues(alpha: 0.12),
             width: 1,
           ),
         ),

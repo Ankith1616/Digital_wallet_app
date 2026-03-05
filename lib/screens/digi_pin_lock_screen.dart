@@ -43,9 +43,21 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
     _shakeAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
     );
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _focusNodes[0].requestFocus(),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNodes[0].requestFocus();
+      _authenticateBiometrics();
+    });
+  }
+
+  Future<void> _authenticateBiometrics() async {
+    final auth = AuthService();
+    await auth.init();
+    if (auth.isBiometricEnabled) {
+      final success = await auth.authenticateBiometrics();
+      if (success && mounted) {
+        widget.onUnlocked();
+      }
+    }
   }
 
   @override
@@ -135,10 +147,10 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
                       width: 88,
                       height: 88,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(22),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                         ),
                       ),
                       child: const Icon(
@@ -191,12 +203,12 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
                             width: 54,
                             height: 64,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
+                              color: Colors.white.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                 color: _controllers[i].text.isNotEmpty
                                     ? AppColors.primary
-                                    : Colors.white.withOpacity(0.2),
+                                    : Colors.white.withValues(alpha: 0.2),
                                 width: 1.5,
                               ),
                             ),
@@ -253,6 +265,29 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
 
                     const SizedBox(height: 16),
 
+                    // Biometric option
+                    FutureBuilder<bool>(
+                      future: AuthService().init().then(
+                        (_) => AuthService().isBiometricEnabled,
+                      ),
+                      builder: (context, snapshot) {
+                        if (snapshot.data == true) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 24),
+                            child: IconButton(
+                              onPressed: _authenticateBiometrics,
+                              icon: const Icon(
+                                Icons.fingerprint,
+                                color: Colors.white70,
+                                size: 40,
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+
                     // Confirm button — NO auto-submit
                     SizedBox(
                       width: double.infinity,
@@ -264,8 +299,8 @@ class _DigiPinLockScreenState extends State<DigiPinLockScreen>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: AppColors.primary,
-                          disabledBackgroundColor: Colors.white.withOpacity(
-                            0.3,
+                          disabledBackgroundColor: Colors.white.withValues(
+                            alpha: 0.3,
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),

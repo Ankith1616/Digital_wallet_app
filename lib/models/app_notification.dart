@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum NotificationType { budget, security, payment, cashback }
+enum NotificationType {
+  budget,
+  security,
+  paymentSuccess,
+  paymentFailed,
+  cashback,
+  rewards,
+  promo,
+}
 
 class AppNotification {
   final String id;
@@ -39,7 +47,7 @@ class AppNotification {
       date: (map['date'] as Timestamp).toDate(),
       type: NotificationType.values.firstWhere(
         (e) => e.name == map['type'],
-        orElse: () => NotificationType.payment,
+        orElse: () => NotificationType.paymentSuccess,
       ),
       isRead: map['isRead'] ?? false,
     );
@@ -51,10 +59,16 @@ class AppNotification {
         return Icons.pie_chart;
       case NotificationType.security:
         return Icons.security;
-      case NotificationType.payment:
-        return Icons.payment;
+      case NotificationType.paymentSuccess:
+        return Icons.check_circle_outline;
+      case NotificationType.paymentFailed:
+        return Icons.error_outline;
       case NotificationType.cashback:
-        return Icons.account_balance_wallet;
+        return Icons.card_giftcard_outlined;
+      case NotificationType.rewards:
+        return Icons.star_outline_rounded;
+      case NotificationType.promo:
+        return Icons.local_offer_outlined;
     }
   }
 
@@ -64,10 +78,16 @@ class AppNotification {
         return Colors.orange;
       case NotificationType.security:
         return Colors.blue;
-      case NotificationType.payment:
-        return Colors.purple;
-      case NotificationType.cashback:
+      case NotificationType.paymentSuccess:
         return Colors.green;
+      case NotificationType.paymentFailed:
+        return Colors.red;
+      case NotificationType.cashback:
+        return Colors.orange;
+      case NotificationType.rewards:
+        return Colors.blue;
+      case NotificationType.promo:
+        return Colors.purple;
     }
   }
 }

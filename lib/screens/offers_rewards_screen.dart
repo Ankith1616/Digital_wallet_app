@@ -106,7 +106,7 @@ class _OffersRewardsScreenState extends State<OffersRewardsScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.35),
+            color: AppColors.primary.withValues(alpha: 0.35),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -191,18 +191,18 @@ class _OffersRewardsScreenState extends State<OffersRewardsScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _applyRewardsNext
-              ? AppColors.success.withOpacity(0.5)
+              ? AppColors.success.withValues(alpha: 0.5)
               : Colors.transparent,
         ),
       ),
       child: SwitchListTile(
         value: _applyRewardsNext,
         onChanged: (val) => setState(() => _applyRewardsNext = val),
-        activeColor: AppColors.success,
+        activeTrackColor: AppColors.success,
         secondary: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.success.withOpacity(0.12),
+            color: AppColors.success.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
           ),
           child: const Icon(
@@ -269,7 +269,7 @@ class _OffersRewardsScreenState extends State<OffersRewardsScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(s.$1, color: AppColors.primary, size: 18),
@@ -321,7 +321,7 @@ class _OffersRewardsScreenState extends State<OffersRewardsScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: tx.color.withOpacity(0.12),
+              color: tx.color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(tx.icon, color: tx.color, size: 18),
@@ -382,7 +382,7 @@ class _OffersRewardsScreenState extends State<OffersRewardsScreen> {
       style: GoogleFonts.spaceGrotesk(
         fontSize: 11,
         fontWeight: FontWeight.w700,
-        color: AppColors.primary.withOpacity(0.7),
+        color: AppColors.primary.withValues(alpha: 0.7),
         letterSpacing: 1.2,
       ),
     );

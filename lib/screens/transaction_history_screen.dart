@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:ui';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -325,7 +324,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.3),
+                    color: Colors.grey.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -379,7 +378,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                             ),
                             decoration: BoxDecoration(
                               color: isDark
-                                  ? Colors.white.withOpacity(0.05)
+                                  ? Colors.white.withValues(alpha: 0.05)
                                   : Colors.grey[100],
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -435,7 +434,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                             ),
                             decoration: BoxDecoration(
                               color: isDark
-                                  ? Colors.white.withOpacity(0.05)
+                                  ? Colors.white.withValues(alpha: 0.05)
                                   : Colors.grey[100],
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -541,7 +540,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       right: -20,
                       child: CircleAvatar(
                         radius: 80,
-                        backgroundColor: Colors.white.withOpacity(0.05),
+                        backgroundColor: Colors.white.withValues(alpha: 0.05),
                       ),
                     ),
                     SafeArea(
@@ -570,10 +569,14 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.1),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.1,
+                                      ),
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
-                                        color: Colors.white.withOpacity(0.2),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.2,
+                                        ),
                                       ),
                                     ),
                                     child: Text(
@@ -592,7 +595,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                               L10n.s("track_spending"),
                               style: GoogleFonts.spaceGrotesk(
                                 fontSize: 14,
-                                color: Colors.white.withOpacity(0.7),
+                                color: Colors.white.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -619,7 +622,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+                          color: Colors.black.withValues(
+                            alpha: isDark ? 0.3 : 0.08,
+                          ),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -632,7 +637,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                           height: 48,
                           decoration: BoxDecoration(
                             color: isDark
-                                ? Colors.white.withOpacity(0.05)
+                                ? Colors.white.withValues(alpha: 0.05)
                                 : Colors.grey[100],
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -683,18 +688,20 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                       color: isSelected
                                           ? AppColors.primary
                                           : (isDark
-                                                ? Colors.white.withOpacity(0.05)
+                                                ? Colors.white.withValues(
+                                                    alpha: 0.05,
+                                                  )
                                                 : Colors.grey[100]),
                                       borderRadius: BorderRadius.circular(14),
                                       border: Border.all(
                                         color: isSelected
                                             ? Colors.transparent
                                             : (isDark
-                                                  ? Colors.white.withOpacity(
-                                                      0.1,
+                                                  ? Colors.white.withValues(
+                                                      alpha: 0.1,
                                                     )
-                                                  : Colors.grey.withOpacity(
-                                                      0.1,
+                                                  : Colors.grey.withValues(
+                                                      alpha: 0.1,
                                                     )),
                                       ),
                                     ),
@@ -741,7 +748,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         Icon(
                           Icons.receipt_long_outlined,
                           size: 80,
-                          color: Colors.grey.withOpacity(0.3),
+                          color: Colors.grey.withValues(alpha: 0.3),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -813,8 +820,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: isDark
-              ? Colors.white.withOpacity(0.05)
-              : Colors.grey.withOpacity(0.1),
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.grey.withValues(alpha: 0.1),
         ),
       ),
       child: Material(
@@ -830,7 +837,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: t.color.withOpacity(0.15),
+                    color: t.color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(t.icon, color: t.color, size: 24),
@@ -883,8 +890,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       ),
                       decoration: BoxDecoration(
                         color: t.isPositive
-                            ? Colors.green.withOpacity(0.1)
-                            : Colors.red.withOpacity(0.1),
+                            ? Colors.green.withValues(alpha: 0.1)
+                            : Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(

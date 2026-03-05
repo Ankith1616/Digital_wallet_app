@@ -88,7 +88,8 @@ class BankSelectorBottomSheet {
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: banks.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final bank = banks[index];
                         return _bankTile(ctx, bank, isDark);
@@ -115,7 +116,7 @@ class BankSelectorBottomSheet {
           color: isDark ? AppColors.darkCard : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: Theme.of(context).dividerColor.withOpacity(0.06),
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
           ),
         ),
         child: Row(
@@ -123,7 +124,7 @@ class BankSelectorBottomSheet {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: bank.color.withOpacity(0.1),
+                color: bank.color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(bank.icon, color: bank.color, size: 22),
@@ -157,4 +158,3 @@ class BankSelectorBottomSheet {
     );
   }
 }
-

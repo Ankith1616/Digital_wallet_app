@@ -382,7 +382,9 @@ class _SelfTransferScreenState extends State<SelfTransferScreen> {
                 onPressed: _isProcessing ? null : _onTransfer,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
+                  disabledBackgroundColor: AppColors.primary.withValues(
+                    alpha: 0.5,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -419,14 +421,14 @@ class _SelfTransferScreenState extends State<SelfTransferScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primary.withOpacity(isDark ? 0.25 : 0.12),
-            const Color(0xFF7B2FBE).withOpacity(isDark ? 0.2 : 0.08),
+            AppColors.primary.withValues(alpha: isDark ? 0.25 : 0.12),
+            const Color(0xFF7B2FBE).withValues(alpha: isDark ? 0.2 : 0.08),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -449,7 +451,7 @@ class _SelfTransferScreenState extends State<SelfTransferScreen> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.35),
+                  color: AppColors.primary.withValues(alpha: 0.35),
                   blurRadius: 12,
                 ),
               ],
@@ -493,7 +495,7 @@ class _SelfTransferScreenState extends State<SelfTransferScreen> {
             style: GoogleFonts.spaceGrotesk(
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              color: AppColors.primary.withOpacity(0.7),
+              color: AppColors.primary.withValues(alpha: 0.7),
               letterSpacing: 1.2,
             ),
           ),
@@ -502,9 +504,13 @@ class _SelfTransferScreenState extends State<SelfTransferScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.2),
+              ),
             ),
             child: DropdownButton<BankAccount>(
               value: selected,
@@ -562,7 +568,7 @@ class _SelfTransferScreenState extends State<SelfTransferScreen> {
       style: GoogleFonts.spaceGrotesk(
         fontSize: 11,
         fontWeight: FontWeight.w700,
-        color: AppColors.primary.withOpacity(0.7),
+        color: AppColors.primary.withValues(alpha: 0.7),
         letterSpacing: 1.2,
       ),
     );
@@ -575,8 +581,8 @@ class _SelfTransferScreenState extends State<SelfTransferScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark
-              ? AppColors.darkBorder.withOpacity(0.4)
-              : Colors.black.withOpacity(0.05),
+              ? AppColors.darkBorder.withValues(alpha: 0.4)
+              : Colors.black.withValues(alpha: 0.05),
         ),
       ),
       child: child,

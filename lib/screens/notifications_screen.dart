@@ -147,7 +147,7 @@ class NotificationsScreen extends StatelessWidget {
         boxShadow: [
           if (!isDark)
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -155,7 +155,7 @@ class NotificationsScreen extends StatelessWidget {
         border: Border.all(
           color: Theme.of(
             context,
-          ).dividerColor.withOpacity(item.isRead ? 0.03 : 0.08),
+          ).dividerColor.withValues(alpha: item.isRead ? 0.03 : 0.08),
         ),
       ),
       child: ListTile(
@@ -165,7 +165,7 @@ class NotificationsScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: item.color.withOpacity(0.1),
+                color: item.color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(item.icon, color: item.color, size: 24),
@@ -237,7 +237,7 @@ class NotificationsScreen extends StatelessWidget {
             IconButton(
               icon: Icon(
                 Icons.delete_outline,
-                color: Colors.red.withOpacity(0.7),
+                color: Colors.red.withValues(alpha: 0.7),
                 size: 20,
               ),
               onPressed: () =>

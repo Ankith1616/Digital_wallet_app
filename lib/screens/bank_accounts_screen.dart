@@ -67,7 +67,7 @@ class BankAccountsScreen extends StatelessWidget {
                         Expanded(
                           child: ListView.separated(
                             itemCount: banks.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (context, index) =>
                                 const SizedBox(height: 12),
                             itemBuilder: (context, index) {
                               final bank = banks[index];
@@ -99,8 +99,8 @@ class BankAccountsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: bank.isPrimary
-              ? AppColors.primary.withOpacity(0.3)
-              : Theme.of(context).dividerColor.withOpacity(0.06),
+              ? AppColors.primary.withValues(alpha: 0.3)
+              : Theme.of(context).dividerColor.withValues(alpha: 0.06),
         ),
       ),
       child: Row(
@@ -108,7 +108,7 @@ class BankAccountsScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -140,7 +140,7 @@ class BankAccountsScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.1),
+                color: AppColors.success.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -194,7 +194,7 @@ class BankAccountsScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -496,7 +496,7 @@ class BankAccountsScreen extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: AppColors.primary.withOpacity(0.3),
+            color: AppColors.primary.withValues(alpha: 0.3),
             style: BorderStyle.solid,
           ),
         ),
@@ -576,7 +576,7 @@ class BankAccountsScreen extends StatelessWidget {
         color: isDark ? AppColors.darkCard : Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
         ),
       ),
       child: TextField(

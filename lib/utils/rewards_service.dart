@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'firestore_service.dart';
 import '../models/transaction.dart';
+import '../models/app_notification.dart';
 import 'transaction_manager.dart';
 
 /// Central service for calculating and managing cashback / rewards.
@@ -42,6 +43,19 @@ class RewardsService {
     final earned = calculateCashback(txAmount);
     if (earned <= 0) return;
     await FirestoreService().addCashback(uid, earned);
+
+    // Trigger Notification
+    await FirestoreService().addNotification(
+      uid,
+      AppNotification(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: "Cashback Earned 🎊",
+        message:
+            "₹${earned.toStringAsFixed(2)} cashback has been credited to your wallet.",
+        date: DateTime.now(),
+        type: NotificationType.cashback,
+      ),
+    );
   }
 
   /// Redeem [amount] from the user's cashback balance.
@@ -67,8 +81,9 @@ class RewardsService {
 
   // ─── Expensya Auto-Apply ──────────────────────────────────────────
 
-  /// Auto-apply cashback discount if Expensya Wallet is activated and
-  /// balance ≥ ₹20. Returns the discount amount applied (0 if none).
+  /// Auto-apply cashback if Expensya Wallet is activated and
+  /// balance ≥ ₹20. Transfers ₹20 directly to the user's primary bank
+  /// account. Returns the amount transferred (0 if none).
   /// Call this after every successful payment.
   Future<double> autoApplyCashback() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -82,21 +97,29 @@ class RewardsService {
     final balance = await getCashbackBalance();
     if (balance < autoApplyThreshold) return 0.0;
 
-    // Redeem ₹20
+    // Get primary bank account
+    final bank = await FirestoreService().getPrimaryBankAccount(uid);
+    if (bank == null) return 0.0;
+
+    // Redeem ₹20 from cashback
     final redeemed = await redeemCashback(autoApplyThreshold);
     if (redeemed <= 0) return 0.0;
+
+    // Credit the primary bank account
+    await FirestoreService().updateBankAccountBalance(uid, bank.id, redeemed);
 
     // Record as a transaction
     TransactionManager().addTransaction(
       Transaction(
         id: 'cashback_${DateTime.now().millisecondsSinceEpoch}',
-        title: 'Expensya Cashback Applied',
+        title: 'Cashback Transferred to Bank',
         date: DateTime.now(),
         amount: redeemed,
         isPositive: true,
-        icon: Icons.redeem,
+        icon: Icons.account_balance,
         color: const Color(0xFF00E5A0),
-        details: 'Auto-applied from Expensya Wallet',
+        details:
+            'Auto-transferred ₹${redeemed.toStringAsFixed(0)} from Expensya Wallet to ${bank.bankName}',
         category: TransactionCategory.other,
       ),
     );

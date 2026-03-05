@@ -56,11 +56,12 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
 
   Future<void> _checkDigiPin() async {
     final has = await AuthService().hasDigiPin();
-    if (mounted)
+    if (mounted) {
       setState(() {
         _hasDigiPin = has;
         _loading = false;
       });
+    }
   }
 
   String get _setPin => _setPinControllers.map((c) => c.text).join();
@@ -327,14 +328,14 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: iconColor.withOpacity(0.3)),
+        border: Border.all(color: iconColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.12),
+              color: iconColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: iconColor, size: 26),
@@ -400,7 +401,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
                 border: Border.all(
                   color: controllers[i].text.isNotEmpty
                       ? AppColors.primary
-                      : Colors.grey.withOpacity(0.3),
+                      : Colors.grey.withValues(alpha: 0.3),
                   width: 1.5,
                 ),
               ),
@@ -456,7 +457,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
           color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: Theme.of(context).dividerColor.withOpacity(0.06),
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
           ),
         ),
         child: Row(
@@ -464,7 +465,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.09),
+                color: AppColors.primary.withValues(alpha: 0.09),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: AppColors.primary, size: 22),

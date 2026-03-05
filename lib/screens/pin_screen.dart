@@ -5,6 +5,9 @@ import 'dart:math' as math;
 import '../utils/theme_manager.dart';
 import '../utils/auth_manager.dart';
 import '../utils/hash_helper.dart';
+import '../utils/firestore_service.dart';
+import '../models/app_notification.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 enum PinMode { create, verify, change, createBank, verifyBank }
 
@@ -112,10 +115,6 @@ class _PinScreenState extends State<PinScreen>
         return;
       }
 
-      print('Entered PIN: $_pin');
-      print('Hashed Input: ${HashHelper.hashPin(_pin)}');
-      print('Expected Hash: ${widget.expectedBankPinHash}');
-
       bool isValid = HashHelper.verifyPin(_pin, widget.expectedBankPinHash!);
       if (isValid) {
         setState(() => _isSuccess = true);
@@ -129,6 +128,23 @@ class _PinScreenState extends State<PinScreen>
         setState(() => _strikeCount++);
         if (_strikeCount >= 3) {
           _showShake('Locked out! Too many attempts.');
+
+          // Trigger Failed Notification
+          final uid = FirebaseAuth.instance.currentUser?.uid;
+          if (uid != null) {
+            await FirestoreService().addNotification(
+              uid,
+              AppNotification(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                title: "Transaction Failed ❌",
+                message:
+                    "Your payment could not be processed due to too many incorrect PIN attempts.",
+                date: DateTime.now(),
+                type: NotificationType.paymentFailed,
+              ),
+            );
+          }
+
           Future.delayed(const Duration(seconds: 2), () {
             if (mounted) Navigator.pop(context, false);
           });
@@ -246,7 +262,7 @@ class _PinScreenState extends State<PinScreen>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.primary.withOpacity(isDark ? 0.12 : 0.07),
+                    AppColors.primary.withValues(alpha: isDark ? 0.12 : 0.07),
                     Colors.transparent,
                   ],
                 ),
@@ -263,7 +279,9 @@ class _PinScreenState extends State<PinScreen>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFF7B2FBE).withOpacity(isDark ? 0.1 : 0.05),
+                    const Color(
+                      0xFF7B2FBE,
+                    ).withValues(alpha: isDark ? 0.1 : 0.05),
                     Colors.transparent,
                   ],
                 ),
@@ -300,7 +318,7 @@ class _PinScreenState extends State<PinScreen>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withOpacity(0.35),
+                          color: AppColors.primary.withValues(alpha: 0.35),
                           blurRadius: 20,
                           spreadRadius: 2,
                         ),
@@ -367,7 +385,7 @@ class _PinScreenState extends State<PinScreen>
                             color: filled || _isSuccess
                                 ? null
                                 : (isDark
-                                      ? Colors.white.withOpacity(0.15)
+                                      ? Colors.white.withValues(alpha: 0.15)
                                       : Colors.grey.shade200),
                             boxShadow: filled || _isSuccess
                                 ? [
@@ -376,7 +394,7 @@ class _PinScreenState extends State<PinScreen>
                                           (_isSuccess
                                                   ? AppColors.success
                                                   : AppColors.primary)
-                                              .withOpacity(0.5),
+                                              .withValues(alpha: 0.5),
                                       blurRadius: 8,
                                       spreadRadius: 1,
                                     ),
@@ -433,12 +451,16 @@ class _PinScreenState extends State<PinScreen>
     if (isConfirm) {
       bgColor = isConfirmEnabled
           ? AppColors.primary
-          : (isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade100);
+          : (isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.grey.shade100);
       glowColor = isConfirmEnabled ? AppColors.primary : null;
     } else if (isDelete) {
-      bgColor = isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade100;
+      bgColor = isDark
+          ? Colors.white.withValues(alpha: 0.06)
+          : Colors.grey.shade100;
     } else {
-      bgColor = isDark ? Colors.white.withOpacity(0.08) : Colors.white;
+      bgColor = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white;
     }
 
     return GestureDetector(
@@ -464,7 +486,7 @@ class _PinScreenState extends State<PinScreen>
           boxShadow: glowColor != null
               ? [
                   BoxShadow(
-                    color: glowColor.withOpacity(0.45),
+                    color: glowColor.withValues(alpha: 0.45),
                     blurRadius: 16,
                     spreadRadius: 2,
                   ),
@@ -472,15 +494,15 @@ class _PinScreenState extends State<PinScreen>
               : [
                   if (!isDark)
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
                 ],
           border: Border.all(
             color: isDark
-                ? Colors.white.withOpacity(0.08)
-                : Colors.grey.withOpacity(0.12),
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.grey.withValues(alpha: 0.12),
             width: 1,
           ),
         ),

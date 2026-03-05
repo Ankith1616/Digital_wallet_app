@@ -39,7 +39,7 @@ class DigiPremiumScreen extends StatelessWidget {
                         height: 200,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.05),
+                          color: Colors.white.withValues(alpha: 0.05),
                         ),
                       ),
                     ),
@@ -51,7 +51,7 @@ class DigiPremiumScreen extends StatelessWidget {
                         height: 150,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.04),
+                          color: Colors.white.withValues(alpha: 0.04),
                         ),
                       ),
                     ),
@@ -72,7 +72,7 @@ class DigiPremiumScreen extends StatelessWidget {
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.amber.withOpacity(0.5),
+                                  color: Colors.amber.withValues(alpha: 0.5),
                                   blurRadius: 20,
                                   spreadRadius: 4,
                                 ),
@@ -130,7 +130,7 @@ class DigiPremiumScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF6C3FE0).withOpacity(0.4),
+                          color: const Color(0xFF6C3FE0).withValues(alpha: 0.4),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         ),
@@ -237,9 +237,11 @@ class DigiPremiumScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withOpacity(0.1),
+                      color: Colors.amber.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                      border: Border.all(
+                        color: Colors.amber.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -288,7 +290,7 @@ class DigiPremiumScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.15 : 0.06),
+                color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.06),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -300,7 +302,7 @@ class DigiPremiumScreen extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.12),
+                  color: iconColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: iconColor, size: 22),

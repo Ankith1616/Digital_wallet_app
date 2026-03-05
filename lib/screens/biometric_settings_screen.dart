@@ -131,7 +131,7 @@ class _BiometricSettingsScreenState extends State<BiometricSettingsScreen> {
                       onChanged: _deviceSupported && _canCheckBiometrics
                           ? _toggleBiometric
                           : null,
-                      activeColor: AppColors.primary,
+                      activeTrackColor: AppColors.primary,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 4,
@@ -139,7 +139,7 @@ class _BiometricSettingsScreenState extends State<BiometricSettingsScreen> {
                       secondary: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.12),
+                          color: AppColors.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
@@ -222,11 +222,13 @@ class _BiometricSettingsScreenState extends State<BiometricSettingsScreen> {
                           SliderTheme(
                             data: SliderTheme.of(context).copyWith(
                               activeTrackColor: AppColors.primary,
-                              inactiveTrackColor: AppColors.primary.withOpacity(
-                                0.2,
+                              inactiveTrackColor: AppColors.primary.withValues(
+                                alpha: 0.2,
                               ),
                               thumbColor: AppColors.primary,
-                              overlayColor: AppColors.primary.withOpacity(0.15),
+                              overlayColor: AppColors.primary.withValues(
+                                alpha: 0.15,
+                              ),
                               trackHeight: 4,
                             ),
                             child: Slider(
@@ -278,7 +280,7 @@ class _BiometricSettingsScreenState extends State<BiometricSettingsScreen> {
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppColors.success.withOpacity(0.12),
+                          color: AppColors.success.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
@@ -317,10 +319,10 @@ class _BiometricSettingsScreenState extends State<BiometricSettingsScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.06),
+                      color: AppColors.primary.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: AppColors.primary.withOpacity(0.15),
+                        color: AppColors.primary.withValues(alpha: 0.15),
                       ),
                     ),
                     child: Row(
@@ -358,19 +360,19 @@ class _BiometricSettingsScreenState extends State<BiometricSettingsScreen> {
         gradient: LinearGradient(
           colors: supported
               ? [
-                  AppColors.success.withOpacity(0.15),
-                  AppColors.success.withOpacity(0.05),
+                  AppColors.success.withValues(alpha: 0.15),
+                  AppColors.success.withValues(alpha: 0.05),
                 ]
               : [
-                  AppColors.error.withOpacity(0.12),
-                  AppColors.error.withOpacity(0.04),
+                  AppColors.error.withValues(alpha: 0.12),
+                  AppColors.error.withValues(alpha: 0.04),
                 ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: supported
-              ? AppColors.success.withOpacity(0.3)
-              : AppColors.error.withOpacity(0.3),
+              ? AppColors.success.withValues(alpha: 0.3)
+              : AppColors.error.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -416,7 +418,7 @@ class _BiometricSettingsScreenState extends State<BiometricSettingsScreen> {
       style: GoogleFonts.spaceGrotesk(
         fontSize: 11,
         fontWeight: FontWeight.w700,
-        color: AppColors.primary.withOpacity(0.7),
+        color: AppColors.primary.withValues(alpha: 0.7),
         letterSpacing: 1.2,
       ),
     );
@@ -429,8 +431,8 @@ class _BiometricSettingsScreenState extends State<BiometricSettingsScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark
-              ? AppColors.darkBorder.withOpacity(0.4)
-              : Colors.black.withOpacity(0.05),
+              ? AppColors.darkBorder.withValues(alpha: 0.4)
+              : Colors.black.withValues(alpha: 0.05),
         ),
       ),
       child: child,

@@ -8,6 +8,7 @@ import 'pin_screen.dart';
 import '../widgets/interactive_scale.dart';
 import '../widgets/payment_confirmation_sheet.dart';
 import '../utils/firestore_service.dart';
+import '../utils/rewards_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class SplitBillScreen extends StatefulWidget {
@@ -58,7 +59,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -98,7 +99,9 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                       color: isDark ? AppColors.darkCard : Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: Theme.of(context).dividerColor.withOpacity(0.08),
+                        color: Theme.of(
+                          context,
+                        ).dividerColor.withValues(alpha: 0.08),
                       ),
                     ),
                     child: Row(
@@ -143,7 +146,9 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                       color: isDark ? AppColors.darkCard : Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: Theme.of(context).dividerColor.withOpacity(0.08),
+                        color: Theme.of(
+                          context,
+                        ).dividerColor.withValues(alpha: 0.08),
                       ),
                     ),
                     child: TextField(
@@ -203,7 +208,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                                   ? AppColors.primary
                                   : Theme.of(
                                       context,
-                                    ).dividerColor.withOpacity(0.08),
+                                    ).dividerColor.withValues(alpha: 0.08),
                               width: isSelected ? 1.5 : 1,
                             ),
                           ),
@@ -212,7 +217,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                               CircleAvatar(
                                 radius: 20,
                                 backgroundColor: (contact['color'] as Color)
-                                    .withOpacity(0.15),
+                                    .withValues(alpha: 0.15),
                                 child: Text(
                                   (contact['name'] as String)[0],
                                   style: GoogleFonts.poppins(
@@ -270,7 +275,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
               color: isDark ? AppColors.darkSurface : Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -4),
                 ),
@@ -325,7 +330,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                             if (!(_amountController.text.isEmpty ||
                                 _selectedContactIndices.isEmpty))
                               BoxShadow(
-                                color: AppColors.primary.withOpacity(0.3),
+                                color: AppColors.primary.withValues(alpha: 0.3),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),
@@ -415,14 +420,33 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
     if (!verified) return;
     if (!mounted) return;
 
-    // 3. Deduct balance from the specific bank account
-    await FirestoreService().updateBankAccountBalance(
-      user.uid,
-      selectedBank.id,
-      -amount,
-    );
+    // 3. Deduct balance with coupons & rewards applied
+    double couponDiscount = 0.0;
+    if (confirmation.appliedCoupon != null) {
+      final coupon = confirmation.appliedCoupon!;
+      if (coupon['type'] == 'flat') {
+        couponDiscount = coupon['discount'];
+      } else {
+        couponDiscount = amount * coupon['discount'];
+        if (couponDiscount > 50) couponDiscount = 50.0;
+      }
+    }
 
-    if (!verified) return;
+    double amountAfterCoupon = (amount - couponDiscount).clamp(0.0, amount);
+    double rewardsUsed = 0.0;
+    if (confirmation.applyRewards) {
+      rewardsUsed = await RewardsService().redeemCashback(amountAfterCoupon);
+    }
+
+    double amountFromBank = amountAfterCoupon - rewardsUsed;
+
+    if (amountFromBank > 0) {
+      await FirestoreService().updateBankAccountBalance(
+        user.uid,
+        selectedBank.id,
+        -amountFromBank,
+      );
+    }
 
     if (!mounted) return;
 
@@ -449,25 +473,53 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
       );
     }
 
+    // Build transaction details for the payer
+    String details = 'Total Bill Paid';
+    if (couponDiscount > 0 || rewardsUsed > 0) {
+      List<String> discounts = [];
+      if (couponDiscount > 0) {
+        discounts.add("Coupon -₹${couponDiscount.toStringAsFixed(2)}");
+      }
+      if (rewardsUsed > 0) {
+        discounts.add("Cashback -₹${rewardsUsed.toStringAsFixed(2)}");
+      }
+      details += " (${discounts.join(', ')})";
+    }
+
     TransactionManager().addTransaction(
       Transaction(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: "Split Paid: $note",
         date: DateTime.now(),
-        amount: -amount,
+        amount: amountFromBank,
         isPositive: false,
         icon: Icons.receipt_long,
         color: Colors.grey,
-        details: 'Total Bill Paid',
+        details: details,
         category: TransactionCategory.bills,
       ),
     );
 
+    // Award cashback & auto-apply Expensya
+    await RewardsService().awardCashback(amount);
+    final autoApplied = await RewardsService().autoApplyCashback();
+
+    if (!mounted) return;
+
+    final cashback = RewardsService().calculateCashback(amount);
+    String snackMsg;
+    if (autoApplied > 0) {
+      snackMsg =
+          'Split sent! +₹${cashback.toStringAsFixed(2)} cashback earned. ₹${autoApplied.toStringAsFixed(0)} transferred to your bank.';
+    } else if (cashback > 0) {
+      snackMsg =
+          'Split requests sent! +₹${cashback.toStringAsFixed(2)} cashback earned!';
+    } else {
+      snackMsg = 'Split requests sent successfully!';
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Split requests sent successfully!"),
-        backgroundColor: AppColors.success,
-      ),
+      SnackBar(content: Text(snackMsg), backgroundColor: AppColors.success),
     );
     Navigator.pop(context);
   }

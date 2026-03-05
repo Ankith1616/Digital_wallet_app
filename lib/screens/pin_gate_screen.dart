@@ -37,7 +37,7 @@ class PinGateScreen extends StatefulWidget {
       context,
       MaterialPageRoute(
         builder: (_) =>
-            PinGateScreen(child: destination, title: title, subtitle: subtitle),
+            PinGateScreen(title: title, subtitle: subtitle, child: destination),
       ),
     );
   }
@@ -102,7 +102,7 @@ class _PinGateScreenState extends State<PinGateScreen> {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.primary.withOpacity(isDark ? 0.12 : 0.07),
+                    AppColors.primary.withValues(alpha: isDark ? 0.12 : 0.07),
                     Colors.transparent,
                   ],
                 ),
@@ -119,7 +119,9 @@ class _PinGateScreenState extends State<PinGateScreen> {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFF7B2FBE).withOpacity(isDark ? 0.1 : 0.05),
+                    const Color(
+                      0xFF7B2FBE,
+                    ).withValues(alpha: isDark ? 0.1 : 0.05),
                     Colors.transparent,
                   ],
                 ),
@@ -156,7 +158,7 @@ class _PinGateScreenState extends State<PinGateScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withOpacity(0.35),
+                        color: AppColors.primary.withValues(alpha: 0.35),
                         blurRadius: 20,
                         spreadRadius: 2,
                       ),
@@ -245,8 +247,9 @@ class _PinGateScreenState extends State<PinGateScreen> {
                     onLockout: () {
                       if (mounted) {
                         setState(() => _isLockedOut = true);
+                        final nav = Navigator.of(context);
                         Future.delayed(const Duration(seconds: 2), () {
-                          if (mounted) Navigator.pop(context);
+                          nav.pop();
                         });
                       }
                     },

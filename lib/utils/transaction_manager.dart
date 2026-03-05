@@ -43,14 +43,14 @@ class TransactionManager extends ChangeNotifier {
 
   void _triggerTransactionNotification(String uid, Transaction transaction) {
     String title = transaction.isPositive
-        ? "Cashback Received! 💰"
+        ? "Payment Received! 💰"
         : "Payment Successful! ✅";
     String message = transaction.isPositive
-        ? "You've earned ₹${transaction.amount.toStringAsFixed(2)} cashback on ${transaction.title}."
-        : "You've successfully paid ₹${transaction.amount.toStringAsFixed(2)} to ${transaction.title}.";
+        ? "You've received ₹${transaction.amount.toStringAsFixed(2)} from ${transaction.title}."
+        : "Your payment of ₹${transaction.amount.toStringAsFixed(2)} to ${transaction.title} was completed successfully.";
     NotificationType type = transaction.isPositive
         ? NotificationType.cashback
-        : NotificationType.payment;
+        : NotificationType.paymentSuccess;
 
     FirestoreService().addNotification(
       uid,

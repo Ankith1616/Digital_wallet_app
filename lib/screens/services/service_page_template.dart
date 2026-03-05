@@ -102,7 +102,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                   gradient: LinearGradient(
                     colors: [
                       widget.themeColor,
-                      widget.themeColor.withOpacity(0.7),
+                      widget.themeColor.withValues(alpha: 0.7),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -110,7 +110,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: widget.themeColor.withOpacity(0.3),
+                      color: widget.themeColor.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -121,7 +121,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Icon(widget.icon, color: Colors.white, size: 30),
@@ -190,7 +190,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                                   ? widget.themeColor
                                   : Theme.of(
                                       context,
-                                    ).dividerColor.withOpacity(0.1),
+                                    ).dividerColor.withValues(alpha: 0.1),
                               width: isSelected ? 2 : 1,
                             ),
                           ),
@@ -277,7 +277,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                                 ? widget.themeColor
                                 : Theme.of(
                                     context,
-                                  ).dividerColor.withOpacity(0.15),
+                                  ).dividerColor.withValues(alpha: 0.15),
                           ),
                         ),
                         child: Text(
@@ -328,7 +328,9 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
                   color: isDark ? AppColors.darkCard : Colors.grey[50],
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: Theme.of(context).dividerColor.withOpacity(0.08),
+                    color: Theme.of(
+                      context,
+                    ).dividerColor.withValues(alpha: 0.08),
                   ),
                 ),
                 child: Row(
@@ -362,7 +364,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.08),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
         ),
       ),
       child: TextFormField(
@@ -544,28 +546,63 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
 
     if (!mounted) return;
 
-    // ── Step 7: Deduct bank balance ───────────────────────────────
-    await FirestoreService().updateBankAccountBalance(
-      user.uid,
-      selectedBank.id,
-      -amountDouble,
+    // ── Step 7: Deduct bank balance with coupons & rewards applied ──
+    double couponDiscount = 0.0;
+    if (confirmation.appliedCoupon != null) {
+      final coupon = confirmation.appliedCoupon!;
+      if (coupon['type'] == 'flat') {
+        couponDiscount = coupon['discount'];
+      } else {
+        couponDiscount = amountDouble * coupon['discount'];
+        if (couponDiscount > 50) couponDiscount = 50.0;
+      }
+    }
+
+    double amountAfterCoupon = (amountDouble - couponDiscount).clamp(
+      0.0,
+      amountDouble,
     );
+    double rewardsUsed = 0.0;
+    if (confirmation.applyRewards) {
+      rewardsUsed = await RewardsService().redeemCashback(amountAfterCoupon);
+    }
+
+    double amountFromBank = amountAfterCoupon - rewardsUsed;
+
+    if (amountFromBank > 0) {
+      await FirestoreService().updateBankAccountBalance(
+        user.uid,
+        selectedBank.id,
+        -amountFromBank,
+      );
+    }
 
     if (!mounted) return;
 
-    // ── Step 7: Record transaction ────────────────────────────────
+    // Build transaction details
+    String details = 'Service Payment';
+    if (couponDiscount > 0 || rewardsUsed > 0) {
+      List<String> discounts = [];
+      if (couponDiscount > 0) {
+        discounts.add("Coupon -₹${couponDiscount.toStringAsFixed(2)}");
+      }
+      if (rewardsUsed > 0) {
+        discounts.add("Cashback -₹${rewardsUsed.toStringAsFixed(2)}");
+      }
+      details += " (${discounts.join(', ')})";
+    }
+
+    // ── Step 8: Record transaction ────────────────────────────────
     TransactionManager().addTransaction(
       Transaction(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: widget.title,
         date: DateTime.now(),
-        amount: -amountDouble,
+        amount: amountFromBank,
         isPositive: false,
-        icon: widget.icon,
-        color: widget.themeColor,
-        details: confirmation.applyRewards
-            ? 'Service Payment (Rewards Applied)'
-            : 'Service Payment',
+        icon: Icons.payments,
+        color: AppColors.primary,
+        details: details,
         category: TransactionCategory.bills,
       ),
     );
@@ -583,7 +620,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
     String subtitle;
     if (autoApplied > 0) {
       subtitle =
-          'Payment processed. +₹${cashback.toStringAsFixed(2)} cashback earned! ₹${autoApplied.toStringAsFixed(0)} auto-applied from Expensya Wallet.';
+          'Payment processed. +₹${cashback.toStringAsFixed(2)} cashback earned! ₹${autoApplied.toStringAsFixed(0)} transferred to your bank.';
     } else if (cashback > 0) {
       subtitle =
           'Your ${widget.title.toLowerCase()} has been processed. +₹${cashback.toStringAsFixed(2)} cashback earned!';
@@ -597,7 +634,7 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
       success: true,
       title: 'Payment Successful!',
       subtitle: subtitle,
-      amount: amount,
+      amount: amountFromBank.toStringAsFixed(2),
       recipient: widget.title,
       onDone: () => Navigator.pop(context),
     );

@@ -5,7 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../utils/theme_manager.dart';
 import '../utils/email_otp_service.dart';
 import '../utils/firebase_auth_service.dart';
-import '../utils/fcm_service.dart';
+import '../utils/auth_manager.dart';
+import '../services/firebase_notification_service.dart';
 import '../widgets/interactive_scale.dart';
 
 /// Email-based OTP verification screen.
@@ -134,9 +135,16 @@ class _EmailOtpScreenState extends State<EmailOtpScreen> {
             return;
           }
 
+          // Save credentials for Biometric Login if biometrics enabled
+          final auth = AuthService();
+          await auth.init();
+          if (auth.isBiometricEnabled) {
+            await auth.saveCredentials(widget.email, widget.password);
+          }
+
           // Init FCM
-          final uid = await FirebaseAuthService().currentUser?.uid;
-          if (uid != null) await FcmService().init(uid: uid);
+          final uid = FirebaseAuthService().currentUser?.uid;
+          if (uid != null) await FirebaseNotificationService().init(uid: uid);
 
           if (!mounted) return;
           _showSnack(
@@ -211,7 +219,7 @@ class _EmailOtpScreenState extends State<EmailOtpScreen> {
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
+                color: Colors.white.withValues(alpha: 0.05),
               ),
             ),
           ),
@@ -223,7 +231,7 @@ class _EmailOtpScreenState extends State<EmailOtpScreen> {
               height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.03),
+                color: Colors.white.withValues(alpha: 0.03),
               ),
             ),
           ),
@@ -255,7 +263,7 @@ class _EmailOtpScreenState extends State<EmailOtpScreen> {
                           width: 80,
                           height: 80,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
+                            color: Colors.white.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Icon(
@@ -299,10 +307,10 @@ class _EmailOtpScreenState extends State<EmailOtpScreen> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.amber.withOpacity(0.15),
+                            color: Colors.amber.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: Colors.amber.withOpacity(0.4),
+                              color: Colors.amber.withValues(alpha: 0.4),
                             ),
                           ),
                           child: Text(
@@ -325,12 +333,12 @@ class _EmailOtpScreenState extends State<EmailOtpScreen> {
                               height: 56,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: _controllers[i].text.isNotEmpty
                                         ? AppColors.primary
-                                        : Colors.white.withOpacity(0.15),
+                                        : Colors.white.withValues(alpha: 0.15),
                                     width: 1.5,
                                   ),
                                 ),
@@ -379,7 +387,7 @@ class _EmailOtpScreenState extends State<EmailOtpScreen> {
                               borderRadius: BorderRadius.circular(14),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.15),
+                                  color: Colors.black.withValues(alpha: 0.15),
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
                                 ),

@@ -7,9 +7,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/theme_manager.dart';
 import '../utils/firebase_auth_service.dart';
-import '../utils/fcm_service.dart';
+import '../services/firebase_notification_service.dart';
 import '../utils/widget_helper.dart';
 import '../widgets/interactive_scale.dart';
+import '../utils/auth_manager.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String phoneNumber;
@@ -135,7 +136,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
       // Init FCM
       if (credential.user != null) {
-        await FcmService().init(uid: credential.user!.uid);
+        await FirebaseNotificationService().init(uid: credential.user!.uid);
+      }
+
+      // Save credentials for Biometric Login if biometrics enabled
+      final auth = AuthService();
+      await auth.init();
+      if (auth.isBiometricEnabled) {
+        // Use phone number as 'email' and a dummy password for phone auth
+        // since phone auth does not use a typical password.
+        await auth.saveCredentials(widget.phoneNumber, 'phone_auth_dummy_pass');
       }
 
       // Push initial widget data so any pinned home widget shows
@@ -182,7 +192,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       },
       onAutoVerified: (credential) async {
         if (credential.user != null) {
-          await FcmService().init(uid: credential.user!.uid);
+          await FirebaseNotificationService().init(uid: credential.user!.uid);
         }
         if (Platform.isAndroid) {
           await WidgetHelper.updateWidgetData(
@@ -225,7 +235,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
+                color: Colors.white.withValues(alpha: 0.05),
               ),
             ),
           ),
@@ -237,7 +247,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.03),
+                color: Colors.white.withValues(alpha: 0.03),
               ),
             ),
           ),
@@ -267,7 +277,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           width: 80,
                           height: 80,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
+                            color: Colors.white.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Icon(
@@ -314,13 +324,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                               height: 56,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color:
                                         _otpControllers[index].text.isNotEmpty
                                         ? AppColors.primary
-                                        : Colors.white.withOpacity(0.15),
+                                        : Colors.white.withValues(alpha: 0.15),
                                     width: 1.5,
                                   ),
                                 ),
@@ -373,7 +383,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                               borderRadius: BorderRadius.circular(14),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.15),
+                                  color: Colors.black.withValues(alpha: 0.15),
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
                                 ),
@@ -457,4 +467,3 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     );
   }
 }
-

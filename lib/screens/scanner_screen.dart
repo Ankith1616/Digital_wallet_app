@@ -46,7 +46,7 @@ class _ScannerTabState extends State<ScannerTab> {
       // true = barcode detected (triggers _onDetect callback automatically)
       // false = no barcode found in image
       final result = await _controller.analyzeImage(image.path);
-      if (result != true && mounted) {
+      if (result == null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -133,7 +133,7 @@ class _ScannerTabState extends State<ScannerTab> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.1),
+                  color: AppColors.success.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -204,7 +204,9 @@ class _ScannerTabState extends State<ScannerTab> {
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.darkCard : Colors.grey[50],
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                  ),
                 ),
                 child: TextField(
                   controller: amountController,
@@ -288,6 +290,9 @@ class _ScannerTabState extends State<ScannerTab> {
                     } else if (confirmation.useBiometric ||
                         auth.requiresBiometric(amountDouble)) {
                       verified = await auth.authenticateBiometrics();
+                      if (verified) {
+                        await auth.recordBiometricUsage(amountDouble);
+                      }
                       if (!verified && ctx.mounted) {
                         // Fallback to PIN
                         final result = await Navigator.push(
@@ -318,35 +323,96 @@ class _ScannerTabState extends State<ScannerTab> {
                     if (!verified) return;
                     if (!ctx.mounted) return;
 
-                    // 3. Deduct balance
-                    await FirestoreService().updateBankAccountBalance(
-                      user.uid,
-                      selectedBank.id,
-                      -amountDouble,
-                    );
+                    // 3. Deduct balance with coupons & rewards applied
+                    double couponDiscount = 0.0;
+                    if (confirmation.appliedCoupon != null) {
+                      final coupon = confirmation.appliedCoupon!;
+                      if (coupon['type'] == 'flat') {
+                        couponDiscount = coupon['discount'];
+                      } else {
+                        couponDiscount = amountDouble * coupon['discount'];
+                        if (couponDiscount > 50) couponDiscount = 50.0;
+                      }
+                    }
+
+                    double amountAfterCoupon = (amountDouble - couponDiscount)
+                        .clamp(0.0, amountDouble);
+                    double rewardsUsed = 0.0;
+                    if (confirmation.applyRewards) {
+                      rewardsUsed = await RewardsService().redeemCashback(
+                        amountAfterCoupon,
+                      );
+                    }
+
+                    double amountFromBank = amountAfterCoupon - rewardsUsed;
+
+                    if (amountFromBank > 0) {
+                      await FirestoreService().updateBankAccountBalance(
+                        user.uid,
+                        selectedBank.id,
+                        -amountFromBank,
+                      );
+                    }
 
                     // 4. Record transaction
+                    String details = L10n.s("upi_payment");
+                    if (couponDiscount > 0 && rewardsUsed > 0) {
+                      details =
+                          "Coupon (-₹${couponDiscount.toStringAsFixed(2)}) & Cashback (-₹${rewardsUsed.toStringAsFixed(2)}) applied";
+                    } else if (couponDiscount > 0) {
+                      details =
+                          "Coupon applied: -₹${couponDiscount.toStringAsFixed(2)}";
+                    } else if (rewardsUsed > 0) {
+                      details =
+                          '${L10n.s("rewards_applied")} (₹${rewardsUsed.toStringAsFixed(2)})';
+                    }
+
                     TransactionManager().addTransaction(
                       Transaction(
                         id: DateTime.now().millisecondsSinceEpoch.toString(),
                         title: '${L10n.s("paid_to")} $name',
                         date: DateTime.now(),
-                        amount: amountDouble,
+                        amount: amountFromBank,
                         isPositive: false,
                         icon: Icons.person,
                         color: AppColors.primary,
-                        details: confirmation.applyRewards
-                            ? L10n.s("rewards_applied")
-                            : L10n.s("upi_payment"),
+                        details: details,
                       ),
                     );
 
                     if (!ctx.mounted) return;
                     Navigator.pop(ctx);
 
-                    // 5. Award cashback & show result
+                    // 5. Award cashback & auto-apply Expensya
                     await RewardsService().awardCashback(amountDouble);
-                    _showPaymentSuccess(amountController.text, data);
+                    final autoApplied = await RewardsService()
+                        .autoApplyCashback();
+
+                    final cashback = RewardsService().calculateCashback(
+                      amountDouble,
+                    );
+                    String successSubtitle;
+                    if (autoApplied > 0) {
+                      successSubtitle =
+                          '${L10n.s("transaction_completed")} +₹${cashback.toStringAsFixed(2)} cashback earned! ₹${autoApplied.toStringAsFixed(0)} transferred to your bank.';
+                    } else if (cashback > 0) {
+                      successSubtitle =
+                          '${L10n.s("transaction_completed")} +₹${cashback.toStringAsFixed(2)} cashback earned!';
+                    } else {
+                      successSubtitle = L10n.s("transaction_completed");
+                    }
+
+                    if (!mounted) return;
+                    PaymentResultDialog.show(
+                      context,
+                      success: true,
+                      title: L10n.s("payment_successful"),
+                      subtitle: successSubtitle,
+                      amount: amountFromBank.toStringAsFixed(2),
+                      recipient: data,
+                      onDone: () => _resetScanner(),
+                    );
+                    return; // skip the old _showPaymentSuccess below
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -388,18 +454,6 @@ class _ScannerTabState extends State<ScannerTab> {
     ).whenComplete(() {
       if (_hasScanned) _resetScanner();
     });
-  }
-
-  void _showPaymentSuccess(String amount, String recipient) {
-    PaymentResultDialog.show(
-      context,
-      success: true,
-      title: L10n.s("payment_successful"),
-      subtitle: L10n.s("transaction_completed"),
-      amount: amount,
-      recipient: recipient,
-      onDone: () => _resetScanner(),
-    );
   }
 
   void _showPaymentFailure(String reason) {
@@ -452,7 +506,7 @@ class _ScannerTabState extends State<ScannerTab> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: Colors.white.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -495,7 +549,10 @@ class _ScannerTabState extends State<ScannerTab> {
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 50),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.transparent, Colors.black.withOpacity(0.85)],
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.85),
+                  ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -517,8 +574,8 @@ class _ScannerTabState extends State<ScannerTab> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: torchOn
-                                    ? AppColors.primary.withOpacity(0.35)
-                                    : Colors.white.withOpacity(0.15),
+                                    ? AppColors.primary.withValues(alpha: 0.35)
+                                    : Colors.white.withValues(alpha: 0.15),
                               ),
                               child: Icon(
                                 torchOn
@@ -553,7 +610,7 @@ class _ScannerTabState extends State<ScannerTab> {
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(0.15),
+                            color: Colors.white.withValues(alpha: 0.15),
                           ),
                           child: _processingGallery
                               ? const SizedBox(
@@ -644,7 +701,7 @@ class QrScannerOverlayShape extends ShapeBorder {
     );
 
     final backgroundPaint = Paint()
-      ..color = Colors.black.withOpacity(0.6)
+      ..color = Colors.black.withValues(alpha: 0.6)
       ..style = PaintingStyle.fill;
 
     final boxPaint = Paint()

@@ -332,8 +332,8 @@ class _DashboardTabState extends State<DashboardTab> {
                                 borderRadius: BorderRadius.circular(18),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: banner.gradient.first.withOpacity(
-                                      0.35,
+                                    color: banner.gradient.first.withValues(
+                                      alpha: 0.35,
                                     ),
                                     blurRadius: 12,
                                     offset: const Offset(0, 6),
@@ -347,7 +347,9 @@ class _DashboardTabState extends State<DashboardTab> {
                                     Container(
                                       padding: const EdgeInsets.all(14),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.2,
+                                        ),
                                         borderRadius: BorderRadius.circular(14),
                                       ),
                                       child: Icon(
@@ -376,8 +378,8 @@ class _DashboardTabState extends State<DashboardTab> {
                                           Text(
                                             banner.subtitle,
                                             style: GoogleFonts.poppins(
-                                              color: Colors.white.withOpacity(
-                                                0.85,
+                                              color: Colors.white.withValues(
+                                                alpha: 0.85,
                                               ),
                                               fontSize: 12,
                                               height: 1.4,
@@ -388,7 +390,9 @@ class _DashboardTabState extends State<DashboardTab> {
                                     ),
                                     Icon(
                                       Icons.arrow_forward_ios,
-                                      color: Colors.white.withOpacity(0.6),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.6,
+                                      ),
                                       size: 18,
                                     ),
                                   ],
@@ -414,7 +418,7 @@ class _DashboardTabState extends State<DashboardTab> {
                         decoration: BoxDecoration(
                           color: isActive
                               ? AppColors.primary
-                              : Colors.grey.withOpacity(0.3),
+                              : Colors.grey.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       );
@@ -672,9 +676,9 @@ class _DashboardTabState extends State<DashboardTab> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
-              border: Border.all(color: color.withOpacity(0.3)),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
             ),
             child: Icon(icon, color: color, size: 24),
           ),
@@ -732,7 +736,7 @@ class _DashboardTabState extends State<DashboardTab> {
           children: [
             CircleAvatar(
               radius: 26,
-              backgroundColor: color.withOpacity(0.15),
+              backgroundColor: color.withValues(alpha: 0.15),
               child: Text(
                 name.isNotEmpty ? name[0].toUpperCase() : '?',
                 style: GoogleFonts.poppins(
@@ -878,7 +882,7 @@ class _DashboardTabState extends State<DashboardTab> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(svc['icon'] as IconData, color: color, size: 24),
@@ -913,7 +917,7 @@ class _DashboardTabState extends State<DashboardTab> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [color, color.withOpacity(0.7)],
+            colors: [color, color.withValues(alpha: 0.7)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -923,7 +927,7 @@ class _DashboardTabState extends State<DashboardTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(icon, color: Colors.white.withOpacity(0.8), size: 32),
+            Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 32),
             const Spacer(),
             Text(
               title,
@@ -975,7 +979,7 @@ class TransactionItem extends StatelessWidget {
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.08),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
         ),
       ),
       child: Row(
@@ -984,7 +988,7 @@ class TransactionItem extends StatelessWidget {
             height: 44,
             width: 44,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(child: FaIcon(icon, color: color, size: 20)),
@@ -1149,10 +1153,10 @@ class _StatsTabState extends State<StatsTab> {
 
           final budget = BudgetManager().budgetData;
           final savingsGoal = budget?.savingsGoal ?? 5000.0;
-          final savedSoFar = currentIncome - currentExpense;
+          final savedSoFar = currentIncome - currentExpense.abs();
 
           final overviewPct = currentIncome > 0
-              ? (currentExpense / currentIncome).clamp(0.0, 1.0)
+              ? (currentExpense.abs() / currentIncome).clamp(0.0, 1.0)
               : 0.0;
           final overviewTrend = prevExpense > 0
               ? "${((currentExpense - prevExpense) / prevExpense * 100).toStringAsFixed(0)}% vs last month"
@@ -1245,15 +1249,17 @@ class _StatsTabState extends State<StatsTab> {
                                   children: [
                                     _buildGridInfoCard(
                                       "This Month Income",
-                                      "₹${currentIncome.toInt()}",
+                                      "₹${currentIncome.abs().toInt()}",
                                       incomeTrend,
-                                      const Color(0xFF00E5A0).withOpacity(0.2),
+                                      const Color(
+                                        0xFF00E5A0,
+                                      ).withValues(alpha: 0.2),
                                       isDark,
                                     ),
                                     const SizedBox(width: 12),
                                     _buildGridInfoCard(
                                       "Avg. Monthly Income",
-                                      "₹${avgIncome.toInt()}",
+                                      "₹${avgIncome.abs().toInt()}",
                                       null,
                                       isDark
                                           ? AppColors.darkCard
@@ -1267,7 +1273,7 @@ class _StatsTabState extends State<StatsTab> {
                                   children: [
                                     _buildGridInfoCard(
                                       "This Month Expense",
-                                      "₹${currentExpense.toInt()}",
+                                      "₹${currentExpense.abs().toInt()}",
                                       expenseTrend,
                                       isDark
                                           ? AppColors.darkCard
@@ -1277,7 +1283,7 @@ class _StatsTabState extends State<StatsTab> {
                                     const SizedBox(width: 12),
                                     _buildGridInfoCard(
                                       "Avg. Monthly Expense",
-                                      "₹${avgExpense.toInt()}",
+                                      "₹${avgExpense.abs().toInt()}",
                                       null,
                                       isDark
                                           ? AppColors.darkCard
@@ -1583,7 +1589,7 @@ class _StatsTabState extends State<StatsTab> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.3),
+                    color: Colors.grey.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -1635,7 +1641,7 @@ class _StatsTabState extends State<StatsTab> {
                             ),
                             decoration: BoxDecoration(
                               color: isDark
-                                  ? Colors.white.withOpacity(0.05)
+                                  ? Colors.white.withValues(alpha: 0.05)
                                   : Colors.grey[100],
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -1691,7 +1697,7 @@ class _StatsTabState extends State<StatsTab> {
                             ),
                             decoration: BoxDecoration(
                               color: isDark
-                                  ? Colors.white.withOpacity(0.05)
+                                  ? Colors.white.withValues(alpha: 0.05)
                                   : Colors.grey[100],
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -1775,7 +1781,7 @@ class _StatsTabState extends State<StatsTab> {
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF2A2A3D) : Colors.white,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.grey.withOpacity(0.1)),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1929,7 +1935,7 @@ class _StatsTabState extends State<StatsTab> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -1955,7 +1961,7 @@ class _StatsTabState extends State<StatsTab> {
                     show: true,
                     drawVerticalLine: false,
                     getDrawingHorizontalLine: (value) => FlLine(
-                      color: Colors.grey.withOpacity(0.1),
+                      color: Colors.grey.withValues(alpha: 0.1),
                       strokeWidth: 1,
                     ),
                   ),
@@ -2016,7 +2022,7 @@ class _StatsTabState extends State<StatsTab> {
                       dotData: const FlDotData(show: true),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: const Color(0xFF00E5A0).withOpacity(0.1),
+                        color: const Color(0xFF00E5A0).withValues(alpha: 0.1),
                       ),
                     ),
                     LineChartBarData(
@@ -2027,7 +2033,7 @@ class _StatsTabState extends State<StatsTab> {
                       dotData: const FlDotData(show: true),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: const Color(0xFF6EE9FF).withOpacity(0.1),
+                        color: const Color(0xFF6EE9FF).withValues(alpha: 0.1),
                       ),
                     ),
                   ],
@@ -2079,7 +2085,7 @@ class _StatsTabState extends State<StatsTab> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
+              color: Colors.black.withValues(alpha: 0.02),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -2144,7 +2150,7 @@ class _StatsTabState extends State<StatsTab> {
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.poppins(
                 fontSize: 10,
-                color: Colors.grey.withOpacity(0.7),
+                color: Colors.grey.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -2184,7 +2190,7 @@ class _StatsTabState extends State<StatsTab> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "₹${balance.toInt()}",
+                      "₹${balance.abs().toInt()}",
                       style: GoogleFonts.poppins(
                         color: Colors.white,
                         fontSize: 32,
@@ -2194,13 +2200,13 @@ class _StatsTabState extends State<StatsTab> {
                     const SizedBox(height: 16),
                     _balanceRow(
                       "Income",
-                      "₹${income.toInt()}",
+                      "₹${income.abs().toInt()}",
                       const Color(0xFF00E5A0),
                     ),
                     const SizedBox(height: 8),
                     _balanceRow(
                       "Expense",
-                      "₹${expense.toInt()}",
+                      "₹${expense.abs().toInt()}",
                       const Color(0xFF6EE9FF),
                     ),
                   ],
@@ -2314,10 +2320,12 @@ class _StatsTabState extends State<StatsTab> {
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.3)),
+        border: Border.all(
+          color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -2354,8 +2362,8 @@ class _StatsTabState extends State<StatsTab> {
                 ),
                 decoration: BoxDecoration(
                   color: isOnTrack
-                      ? const Color(0xFF4CAF50).withOpacity(0.1)
-                      : Colors.red.withOpacity(0.1),
+                      ? const Color(0xFF4CAF50).withValues(alpha: 0.1)
+                      : Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -2394,7 +2402,7 @@ class _StatsTabState extends State<StatsTab> {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 10,
-              backgroundColor: const Color(0xFF4CAF50).withOpacity(0.1),
+              backgroundColor: const Color(0xFF4CAF50).withValues(alpha: 0.1),
               valueColor: AlwaysStoppedAnimation(
                 progress >= 1.0 ? Colors.amber : const Color(0xFF4CAF50),
               ),
@@ -2500,7 +2508,7 @@ class _StatsTabState extends State<StatsTab> {
                         child: Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: color.withOpacity(0.12),
+                            color: color.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Icon(
@@ -2520,7 +2528,7 @@ class _StatsTabState extends State<StatsTab> {
                 child: LinearProgressIndicator(
                   value: progress,
                   minHeight: 6,
-                  backgroundColor: color.withOpacity(0.1),
+                  backgroundColor: color.withValues(alpha: 0.1),
                   valueColor: AlwaysStoppedAnimation(
                     isOver ? Colors.red : color,
                   ),
@@ -2580,7 +2588,7 @@ class _StatsTabState extends State<StatsTab> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.3),
+                      color: Colors.grey.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -2633,17 +2641,21 @@ class _StatsTabState extends State<StatsTab> {
                     hintText: "0",
                     hintStyle: GoogleFonts.poppins(
                       fontSize: 22,
-                      color: Colors.grey.withOpacity(0.4),
+                      color: Colors.grey.withValues(alpha: 0.4),
                     ),
                     filled: true,
-                    fillColor: color.withOpacity(0.06),
+                    fillColor: color.withValues(alpha: 0.06),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: color.withOpacity(0.3)),
+                      borderSide: BorderSide(
+                        color: color.withValues(alpha: 0.3),
+                      ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: color.withOpacity(0.3)),
+                      borderSide: BorderSide(
+                        color: color.withValues(alpha: 0.3),
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -2667,7 +2679,9 @@ class _StatsTabState extends State<StatsTab> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          side: BorderSide(color: Colors.grey.withOpacity(0.4)),
+                          side: BorderSide(
+                            color: Colors.grey.withValues(alpha: 0.4),
+                          ),
                         ),
                         child: Text(
                           "Cancel",
@@ -2744,7 +2758,7 @@ class _StatsTabState extends State<StatsTab> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -2755,7 +2769,7 @@ class _StatsTabState extends State<StatsTab> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF00E5A0).withOpacity(0.2),
+              color: const Color(0xFF00E5A0).withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -2810,7 +2824,7 @@ class _StatsTabState extends State<StatsTab> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF6C63FF).withOpacity(0.3),
+              color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -2821,7 +2835,7 @@ class _StatsTabState extends State<StatsTab> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(15),
               ),
               child: ClipRRect(
@@ -2855,7 +2869,7 @@ class _StatsTabState extends State<StatsTab> {
                   Text(
                     "Chat with Expensya to plan your month",
                     style: GoogleFonts.poppins(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 12,
                     ),
                   ),
@@ -2945,7 +2959,7 @@ class _StatsTabState extends State<StatsTab> {
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
         ),
       ),
       child: Row(
@@ -2953,7 +2967,7 @@ class _StatsTabState extends State<StatsTab> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(Icons.widgets_outlined, color: AppColors.primary),
@@ -2981,7 +2995,7 @@ class _StatsTabState extends State<StatsTab> {
           TextButton(
             onPressed: _isPinning ? null : _pinWidget,
             style: TextButton.styleFrom(
-              backgroundColor: AppColors.primary.withOpacity(0.1),
+              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),

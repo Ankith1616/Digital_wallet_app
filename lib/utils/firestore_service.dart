@@ -2,7 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
 import 'package:flutter/material.dart';
 import '../models/transaction.dart';
 import '../models/bank_account.dart';
-import '../models/app_notification.dart';
+import '../models/app_notification.dart' as model;
+import '../models/notification_preferences.dart';
 import '../utils/icon_helper.dart';
 
 class FirestoreService {
@@ -55,7 +56,7 @@ class FirestoreService {
 
   /// Save FCM token to user doc
   Future<void> saveFcmToken(String uid, String token) async {
-    await _db.collection('users').doc(uid).update({'fcmToken': token});
+    await _db.collection('users').doc(uid).update({'deviceToken': token});
   }
 
   /// Update user profile data
@@ -63,10 +64,90 @@ class FirestoreService {
     await _db.collection('users').doc(uid).set(data, SetOptions(merge: true));
   }
 
+  // ─── Notification Settings ─────────────────────────────────────
+
+  /// Update notification preferences in Firestore
+  Future<void> updateNotificationPreferences(
+    String uid,
+    NotificationPreferences prefs,
+  ) async {
+    await _db
+        .collection('users')
+        .doc(uid)
+        .collection('settings')
+        .doc('notificationPreferences')
+        .set(prefs.toMap());
+  }
+
+  /// Fetch notification preferences from Firestore once
+  Future<NotificationPreferences> getNotificationPreferences(String uid) async {
+    final doc = await _db
+        .collection('users')
+        .doc(uid)
+        .collection('settings')
+        .doc('notificationPreferences')
+        .get();
+
+    if (!doc.exists) return NotificationPreferences();
+    return NotificationPreferences.fromMap(doc.data()!);
+  }
+
+  /// Stream notification preferences from Firestore
+  Stream<NotificationPreferences> notificationPreferencesStream(String uid) {
+    return _db
+        .collection('users')
+        .doc(uid)
+        .collection('settings')
+        .doc('notificationPreferences')
+        .snapshots()
+        .map((snap) {
+          if (!snap.exists) return NotificationPreferences();
+          return NotificationPreferences.fromMap(snap.data()!);
+        });
+  }
+
   // ─── Notifications ─────────────────────────────────────────────
 
-  /// Add a notification to Firestore
-  Future<void> addNotification(String uid, AppNotification notification) async {
+  /// Add a notification to Firestore, respecting user preferences
+  Future<void> addNotification(
+    String uid,
+    model.AppNotification notification,
+  ) async {
+    // Fetch preferences from Firestore
+    final p = await getNotificationPreferences(uid);
+
+    // 1. Check Master Push Toggle
+    if (!p.pushNotifications) return;
+
+    // 2. Check Category Preference
+    bool categoryEnabled = true;
+    switch (notification.type) {
+      case model.NotificationType.paymentSuccess:
+        categoryEnabled = p.transactionSuccess;
+        break;
+      case model.NotificationType.paymentFailed:
+        categoryEnabled = p.transactionFailed;
+        break;
+      case model.NotificationType.cashback:
+        categoryEnabled = p.cashbackEarned;
+        break;
+      case model.NotificationType.rewards:
+        categoryEnabled = p.rewardsOffers;
+        break;
+      case model.NotificationType.promo:
+        categoryEnabled = p.promotionalOffers;
+        break;
+      case model.NotificationType.security:
+        categoryEnabled = p.securityAlerts;
+        break;
+      case model.NotificationType.budget:
+        // Budget alerts are currently not in settings, default to master toggle
+        categoryEnabled = true;
+        break;
+    }
+
+    if (!categoryEnabled) return;
+
     await _db
         .collection('users')
         .doc(uid)
@@ -76,7 +157,7 @@ class FirestoreService {
   }
 
   /// Live stream of notifications for a user, newest first
-  Stream<List<AppNotification>> notificationsStream(String uid) {
+  Stream<List<model.AppNotification>> notificationsStream(String uid) {
     return _db
         .collection('users')
         .doc(uid)
@@ -86,7 +167,7 @@ class FirestoreService {
         .snapshots()
         .map(
           (snap) => snap.docs
-              .map((doc) => AppNotification.fromMap(doc.data()))
+              .map((doc) => model.AppNotification.fromMap(doc.data()))
               .toList(),
         );
   }
@@ -258,13 +339,13 @@ class FirestoreService {
     // Trigger notification
     await addNotification(
       uid,
-      AppNotification(
+      model.AppNotification(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: "Bank Account Added 🏦",
         message:
             "${bank.bankName} account (****${bank.accountNumber.substring(bank.accountNumber.length - 4)}) has been linked.",
         date: DateTime.now(),
-        type: NotificationType.security,
+        type: model.NotificationType.security,
       ),
     );
   }
@@ -325,13 +406,13 @@ class FirestoreService {
       // Trigger notification
       await addNotification(
         uid,
-        AppNotification(
+        model.AppNotification(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           title: "Bank Account Removed ⚠️",
           message:
               "$bankName (****$lastFour) has been unlinked from your wallet.",
           date: DateTime.now(),
-          type: NotificationType.security,
+          type: model.NotificationType.security,
         ),
       );
     }
@@ -389,13 +470,13 @@ class FirestoreService {
 
       await addNotification(
         uid,
-        AppNotification(
+        model.AppNotification(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           title: "Bank PIN Updated 🔐",
           message:
               "Transaction PIN for $bankName (****$lastFour) has been updated.",
           date: DateTime.now(),
-          type: NotificationType.security,
+          type: model.NotificationType.security,
         ),
       );
     }
@@ -449,5 +530,20 @@ class FirestoreService {
   Future<bool> isExpensyaActivated(String uid) async {
     final doc = await _db.collection('users').doc(uid).get();
     return (doc.data()?['expensyaActivated'] as bool?) ?? false;
+  }
+
+  /// Fetch the user's primary bank account (falls back to first linked account)
+  Future<BankAccount?> getPrimaryBankAccount(String uid) async {
+    final snap = await _db
+        .collection('users')
+        .doc(uid)
+        .collection('bank_accounts')
+        .get();
+    if (snap.docs.isEmpty) return null;
+    final primaryDocs = snap.docs
+        .where((d) => d.data()['isPrimary'] == true)
+        .toList();
+    final doc = primaryDocs.isNotEmpty ? primaryDocs.first : snap.docs.first;
+    return BankAccount.fromMap(doc.data());
   }
 }

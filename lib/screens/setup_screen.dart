@@ -31,6 +31,28 @@ class _SetupScreenState extends State<SetupScreen> {
     });
   }
 
+  Future<void> _toggleBiometric(bool val) async {
+    if (val) {
+      final result = await _auth.authenticateBiometricsDetailed();
+      if (!result.success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result.errorMessage ?? 'Biometric verification failed',
+                style: GoogleFonts.spaceGrotesk(),
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
+    }
+    setState(() => _biometricEnabled = val);
+  }
+
   Future<void> _saveSettings() async {
     await _auth.toggleBiometric(_biometricEnabled);
     await _auth.toggleInstantPay(_instantPayEnabled);
@@ -80,7 +102,7 @@ class _SetupScreenState extends State<SetupScreen> {
               subtitle: "Process small payments without PIN",
               trailing: Switch(
                 value: _instantPayEnabled,
-                activeColor: AppColors.primary,
+                activeTrackColor: AppColors.primary,
                 onChanged: (val) => setState(() => _instantPayEnabled = val),
               ),
             ),
@@ -91,8 +113,8 @@ class _SetupScreenState extends State<SetupScreen> {
               subtitle: "Use FaceID/Fingerprint for high-value payments",
               trailing: Switch(
                 value: _biometricEnabled,
-                activeColor: AppColors.primary,
-                onChanged: (val) => setState(() => _biometricEnabled = val),
+                activeTrackColor: AppColors.primary,
+                onChanged: _toggleBiometric,
               ),
             ),
             const SizedBox(height: 32),
@@ -143,7 +165,7 @@ class _SetupScreenState extends State<SetupScreen> {
                       activeTrackColor: AppColors.primary,
                       inactiveTrackColor: Colors.white12,
                       thumbColor: Colors.white,
-                      overlayColor: AppColors.primary.withOpacity(0.2),
+                      overlayColor: AppColors.primary.withValues(alpha: 0.2),
                     ),
                     child: Slider(
                       value: _instantLimit,
@@ -169,85 +191,18 @@ class _SetupScreenState extends State<SetupScreen> {
                   const SizedBox(height: 24),
                   const Divider(color: Colors.white10),
                   const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Daily Security Limit",
-                            style: GoogleFonts.spaceGrotesk(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            "Cumulative daily cap",
-                            style: GoogleFonts.spaceGrotesk(
-                              color: Colors.grey,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        "₹2,000",
-                        style: GoogleFonts.spaceGrotesk(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                  _dailyUsageRow(
+                    "Daily Instant Pay Limit",
+                    "Cumulative daily cap for PIN-less pay",
+                    _auth.instantDailyUsage,
+                    AuthService.maxDailyInstantLimit,
                   ),
-                  const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.black26,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              "Today's Usage",
-                              style: GoogleFonts.spaceGrotesk(
-                                color: Colors.grey[400],
-                                fontSize: 12,
-                              ),
-                            ),
-                            Text(
-                              "₹${_auth.instantDailyUsage.toStringAsFixed(0)} / ₹2,000",
-                              style: GoogleFonts.spaceGrotesk(
-                                color: AppColors.primary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: _auth.instantDailyUsage / 2000,
-                            backgroundColor: Colors.white10,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              _auth.instantDailyUsage >= 2000
-                                  ? Colors.red
-                                  : AppColors.primary,
-                            ),
-                            minHeight: 6,
-                          ),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 24),
+                  _dailyUsageRow(
+                    "Daily Biometric Limit",
+                    "Total daily limit for biometric payments",
+                    _auth.biometricDailyUsage,
+                    AuthService.maxDailyBiometricLimit,
                   ),
                 ],
               ),
@@ -265,7 +220,7 @@ class _SetupScreenState extends State<SetupScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   elevation: 8,
-                  shadowColor: AppColors.primary.withOpacity(0.4),
+                  shadowColor: AppColors.primary.withValues(alpha: 0.4),
                 ),
                 child: Text(
                   "Save Changes",
@@ -279,6 +234,96 @@ class _SetupScreenState extends State<SetupScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _dailyUsageRow(
+    String title,
+    String subtitle,
+    double current,
+    double limit,
+  ) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.spaceGrotesk(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.spaceGrotesk(
+                    color: Colors.grey,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              "₹${limit.toInt()}",
+              style: GoogleFonts.spaceGrotesk(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.black26,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Today's Usage",
+                    style: GoogleFonts.spaceGrotesk(
+                      color: Colors.grey[400],
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    "₹${current.toStringAsFixed(0)} / ₹${limit.toInt()}",
+                    style: GoogleFonts.spaceGrotesk(
+                      color: AppColors.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: limit > 0 ? (current / limit) : 0,
+                  backgroundColor: Colors.white10,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    current >= limit ? Colors.red : AppColors.primary,
+                  ),
+                  minHeight: 6,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -315,7 +360,7 @@ class _SetupScreenState extends State<SetupScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: AppColors.primary, size: 24),

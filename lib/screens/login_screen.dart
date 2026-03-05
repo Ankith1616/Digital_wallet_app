@@ -5,10 +5,9 @@ import '../utils/theme_manager.dart';
 import '../utils/auth_manager.dart';
 import '../utils/firebase_auth_service.dart';
 import '../utils/email_otp_service.dart';
-import '../utils/fcm_service.dart';
+import '../services/firebase_notification_service.dart';
 import 'email_otp_screen.dart';
 import 'otp_verification_screen.dart';
-import 'pin_screen.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import '../widgets/interactive_scale.dart';
 
@@ -222,7 +221,7 @@ class _LoginScreenState extends State<LoginScreen>
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
+                color: Colors.white.withValues(alpha: 0.05),
               ),
             ),
           ),
@@ -234,7 +233,7 @@ class _LoginScreenState extends State<LoginScreen>
               height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.03),
+                color: Colors.white.withValues(alpha: 0.03),
               ),
             ),
           ),
@@ -250,7 +249,7 @@ class _LoginScreenState extends State<LoginScreen>
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Icon(
@@ -280,7 +279,7 @@ class _LoginScreenState extends State<LoginScreen>
                   // Tab bar
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
+                      color: Colors.white.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: TabBar(
@@ -450,9 +449,9 @@ class _LoginScreenState extends State<LoginScreen>
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.15)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
             ),
             child: Row(
               children: [
@@ -495,7 +494,7 @@ class _LoginScreenState extends State<LoginScreen>
                 Container(
                   width: 1,
                   height: 30,
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                 ),
                 Expanded(
                   child: TextFormField(
@@ -586,7 +585,7 @@ class _LoginScreenState extends State<LoginScreen>
       },
       onAutoVerified: (credential) async {
         if (credential.user != null) {
-          await FcmService().init(uid: credential.user!.uid);
+          await FirebaseNotificationService().init(uid: credential.user!.uid);
         }
         if (!mounted) return;
         setState(() => _loading = false);
@@ -612,9 +611,9 @@ class _LoginScreenState extends State<LoginScreen>
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.15)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
       ),
       child: TextField(
         controller: controller,
@@ -661,7 +660,7 @@ class _LoginScreenState extends State<LoginScreen>
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -692,9 +691,9 @@ class _LoginScreenState extends State<LoginScreen>
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.15)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -731,27 +730,50 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> _handleBiometricLogin() async {
     final auth = AuthService();
-    final nav = Navigator.of(context);
-    bool authenticated = await auth.authenticateBiometrics();
-    if (authenticated) {
-      // StreamBuilder in main.dart will auto-navigate to MainLayout
-    } else {
-      if (!mounted) return;
-      bool hasPin = await auth.hasPin();
-      if (hasPin) {
-        nav.push(
-          MaterialPageRoute(
-            builder: (_) => PinScreen(
-              mode: PinMode.verify,
-              onSuccess: () {
-                // StreamBuilder in main.dart will auto-navigate to MainLayout
-              },
-            ),
-          ),
+    final credentials = await auth.getSavedCredentials();
+
+    if (credentials == null) {
+      _showError('Please log in manually first to enable biometric login.');
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      bool authenticated = await auth.authenticateBiometrics();
+      if (authenticated) {
+        final email = credentials['email']!;
+        final password = credentials['password']!;
+
+        final error = await FirebaseAuthService().prepareLogin(
+          email: email,
+          password: password,
         );
+
+        if (error != null) {
+          _showError(error);
+          return;
+        }
+
+        // For biometric login, we bypass OTP for convenience (standard pattern)
+        // or we could require it, but usually biometric IS the bypass.
+        // Let's complete the sign-in directly.
+        await FirebaseAuthService().completeSignIn(
+          email: email,
+          password: password,
+        );
+
+        // Init FCM
+        final uid = FirebaseAuthService().currentUser?.uid;
+        if (uid != null) await FirebaseNotificationService().init(uid: uid);
+
+        if (mounted) _showSuccess('Welcome back!');
       } else {
-        _showError('Biometric auth failed and no PIN set.');
+        _showError('Biometric authentication failed.');
       }
+    } catch (e) {
+      _showError('Biometric login failed: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 }

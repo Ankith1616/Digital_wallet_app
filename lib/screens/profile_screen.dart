@@ -8,14 +8,11 @@ import '../utils/theme_manager.dart';
 import '../utils/firebase_auth_service.dart';
 import 'personal_info_screen.dart';
 import 'bank_accounts_screen.dart';
-import 'notifications_settings_screen.dart';
-import 'privacy_security_screen.dart';
+import '../features/notifications/notification_settings_screen.dart';
 import 'theme_selection_screen.dart';
 import 'help_support_screen.dart';
 import 'about_screen.dart';
 import 'autopay_management_screen.dart';
-import 'biometric_settings_screen.dart';
-import 'pin_gate_screen.dart';
 import 'digi_premium_screen.dart';
 import '../widgets/interactive_scale.dart';
 import '../utils/locale_manager.dart';
@@ -143,7 +140,7 @@ class _ProfileTabState extends State<ProfileTab> {
                     gradient: AppColors.headerGradient,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: AppColors.primary.withOpacity(0.25),
+                      color: AppColors.primary.withValues(alpha: 0.25),
                       width: 1,
                     ),
                   ),
@@ -161,7 +158,7 @@ class _ProfileTabState extends State<ProfileTab> {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primary.withOpacity(0.4),
+                                color: AppColors.primary.withValues(alpha: 0.4),
                                 blurRadius: 12,
                               ),
                             ],
@@ -297,39 +294,8 @@ class _ProfileTabState extends State<ProfileTab> {
               Icons.notifications_rounded,
               L10n.s("notifications"),
               const Color(0xFFFF8C42),
-              const NotificationsSettingsScreen(),
+              const NotificationSettingsScreen(),
               isDark,
-            ),
-            // Biometric & Security tile
-            _settingsTile(
-              context,
-              Icons.fingerprint,
-              'Biometric & Security',
-              const Color(0xFF4CAF50),
-              const BiometricSettingsScreen(),
-              isDark,
-            ),
-            // Privacy & Security — PIN protected
-            _pinProtectedTile(
-              context,
-              Icons.shield_rounded,
-              L10n.s("privacy_security"),
-              const Color(0xFFFF4F6D),
-              const PrivacySecurityScreen(),
-              isDark,
-              title: 'Security Settings',
-              subtitle: 'Enter PIN to access privacy & security settings.',
-            ),
-            // Change Digi PIN
-            _pinProtectedTile(
-              context,
-              Icons.password_rounded,
-              'Change Digi PIN',
-              AppColors.primary,
-              const PrivacySecurityScreen(), // Maps to Privacy screen for now where PIN change will live
-              isDark,
-              title: 'Verify Current PIN',
-              subtitle: 'Enter your current PIN to change it.',
             ),
             _settingsTile(
               context,
@@ -379,19 +345,21 @@ class _ProfileTabState extends State<ProfileTab> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.error.withOpacity(0.12),
-                      AppColors.error.withOpacity(0.06),
+                      AppColors.error.withValues(alpha: 0.12),
+                      AppColors.error.withValues(alpha: 0.06),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.error.withOpacity(0.25)),
+                  border: Border.all(
+                    color: AppColors.error.withValues(alpha: 0.25),
+                  ),
                 ),
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.12),
+                      color: AppColors.error.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
@@ -427,7 +395,7 @@ class _ProfileTabState extends State<ProfileTab> {
         style: GoogleFonts.spaceGrotesk(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: AppColors.primary.withOpacity(0.7),
+          color: AppColors.primary.withValues(alpha: 0.7),
           letterSpacing: 1.5,
         ),
       ),
@@ -457,31 +425,6 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
-  /// A tile that first verifies PIN before navigating to [dest].
-  Widget _pinProtectedTile(
-    BuildContext context,
-    IconData icon,
-    String tileLabel,
-    Color iconColor,
-    Widget dest,
-    bool isDark, {
-    String? title,
-    String? subtitle,
-  }) {
-    return InteractiveScale(
-      onTap: () {
-        PinGateScreen.push(
-          context,
-          destination: dest,
-          title: title,
-          subtitle: subtitle,
-        );
-      },
-      borderRadius: BorderRadius.circular(14),
-      child: _tileBody(icon, tileLabel, iconColor, isDark),
-    );
-  }
-
   Widget _tileBody(IconData icon, String title, Color iconColor, bool isDark) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -490,8 +433,8 @@ class _ProfileTabState extends State<ProfileTab> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isDark
-              ? AppColors.darkBorder.withOpacity(0.4)
-              : Colors.black.withOpacity(0.04),
+              ? AppColors.darkBorder.withValues(alpha: 0.4)
+              : Colors.black.withValues(alpha: 0.04),
         ),
       ),
       child: ListTile(
@@ -500,7 +443,7 @@ class _ProfileTabState extends State<ProfileTab> {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.12),
+            color: iconColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: iconColor, size: 20),
@@ -528,8 +471,8 @@ class _ProfileTabState extends State<ProfileTab> {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isDark
-                ? AppColors.darkBorder.withOpacity(0.4)
-                : Colors.black.withOpacity(0.04),
+                ? AppColors.darkBorder.withValues(alpha: 0.4)
+                : Colors.black.withValues(alpha: 0.04),
           ),
         ),
         child: ListTile(
@@ -538,7 +481,7 @@ class _ProfileTabState extends State<ProfileTab> {
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFF7B2FBE).withOpacity(0.12),
+              color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(

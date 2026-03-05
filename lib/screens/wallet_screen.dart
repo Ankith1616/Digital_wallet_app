@@ -118,18 +118,21 @@ class _WalletScreenState extends State<WalletScreen> {
               leading: const Icon(Icons.bolt, color: Colors.white, size: 32),
               trailing: TextButton(
                 onPressed: () async {
+                  final nav = Navigator.of(context);
                   final hasPin = await AuthService().hasDigiPin();
                   if (!mounted) return;
                   if (hasPin) {
-                    await PinGateScreen.push(
-                      context,
-                      destination: const SetupScreen(),
-                      title: 'Verify Digi PIN',
-                      subtitle: 'Enter your PIN to access Setup',
+                    await nav.push(
+                      MaterialPageRoute(
+                        builder: (_) => PinGateScreen(
+                          title: 'Verify Digi PIN',
+                          subtitle: 'Enter your PIN to access Setup',
+                          child: const SetupScreen(),
+                        ),
+                      ),
                     );
                   } else {
-                    await Navigator.push(
-                      context,
+                    await nav.push(
                       MaterialPageRoute(builder: (_) => const SetupScreen()),
                     );
                   }
@@ -169,12 +172,14 @@ class _WalletScreenState extends State<WalletScreen> {
                         trailing: TextButton(
                           onPressed: () async {
                             if (isActivated) return;
+                            final messenger = ScaffoldMessenger.of(context);
                             await FirestoreService().setExpensyaActivated(
                               user.uid,
                               true,
                             );
-                            if (mounted) setState(() {});
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            if (!mounted) return;
+                            setState(() {});
+                            messenger.showSnackBar(
                               const SnackBar(
                                 content: Text('Expensya Wallet Activated! 🎉'),
                                 backgroundColor: Colors.green,

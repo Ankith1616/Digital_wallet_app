@@ -13,18 +13,27 @@ import 'screens/scanner_screen.dart';
 import 'screens/transaction_history_screen.dart';
 import 'screens/budget_bot_screen.dart';
 import 'utils/theme_manager.dart';
-import 'utils/fcm_service.dart';
+import 'services/firebase_notification_service.dart';
 import 'utils/locale_manager.dart';
 import 'utils/auth_manager.dart';
 import 'utils/localization_helper.dart';
+import 'package:provider/provider.dart';
+import 'features/notifications/notification_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  FcmService.registerBackgroundHandler();
+  FirebaseNotificationService.registerBackgroundHandler();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await LocaleManager().init();
   await AuthService().init();
-  runApp(const DigitalWalletApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => NotificationController()),
+      ],
+      child: const DigitalWalletApp(),
+    ),
+  );
 }
 
 class DigitalWalletApp extends StatelessWidget {
@@ -155,8 +164,8 @@ class _MainLayoutState extends State<MainLayout> {
           boxShadow: [
             BoxShadow(
               color: isDark
-                  ? AppColors.primary.withOpacity(0.06)
-                  : Colors.black.withOpacity(0.07),
+                  ? AppColors.primary.withValues(alpha: 0.06)
+                  : Colors.black.withValues(alpha: 0.07),
               blurRadius: 24,
               offset: const Offset(0, -4),
             ),
@@ -164,8 +173,8 @@ class _MainLayoutState extends State<MainLayout> {
           border: Border(
             top: BorderSide(
               color: isDark
-                  ? AppColors.darkBorder.withOpacity(0.5)
-                  : Colors.black.withOpacity(0.05),
+                  ? AppColors.darkBorder.withValues(alpha: 0.5)
+                  : Colors.black.withValues(alpha: 0.05),
               width: 0.5,
             ),
           ),
@@ -202,13 +211,13 @@ class _MainLayoutState extends State<MainLayout> {
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withOpacity(isDark ? 0.15 : 0.1)
+              ? AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.18),
+                    color: AppColors.primary.withValues(alpha: 0.18),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -257,7 +266,9 @@ class _MainLayoutState extends State<MainLayout> {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(isSelected ? 0.55 : 0.35),
+              color: AppColors.primary.withValues(
+                alpha: isSelected ? 0.55 : 0.35,
+              ),
               blurRadius: isSelected ? 20 : 12,
               spreadRadius: isSelected ? 2 : 0,
               offset: const Offset(0, 4),

@@ -52,9 +52,9 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
       margin: const EdgeInsets.symmetric(vertical: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
+        color: AppColors.primary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,9 +243,12 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
       padding: const EdgeInsets.all(20),
       margin: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.1),
+        color: AppColors.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 2),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.2),
+          width: 2,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -465,7 +468,9 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
                         padding: const EdgeInsets.only(bottom: 6, right: 8),
                         child: CircleAvatar(
                           radius: 14,
-                          backgroundColor: AppColors.primary.withOpacity(0.1),
+                          backgroundColor: AppColors.primary.withValues(
+                            alpha: 0.1,
+                          ),
                           child: Icon(
                             Icons.smart_toy_rounded,
                             size: 16,
@@ -521,7 +526,7 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 5,
               offset: const Offset(0, 2),
             ),
@@ -548,7 +553,7 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
         margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(0.1),
+          color: Colors.grey.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -559,7 +564,7 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
               width: 8,
               height: 8,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.5),
+                color: AppColors.primary.withValues(alpha: 0.5),
                 shape: BoxShape.circle,
               ),
             );
@@ -574,7 +579,9 @@ class _ExpensyaChatbotScreenState extends State<ExpensyaChatbotScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       decoration: BoxDecoration(
         color: isDark ? Colors.black : Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.2))),
+        border: Border(
+          top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+        ),
       ),
       child: Row(
         children: [
