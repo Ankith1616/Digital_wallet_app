@@ -243,9 +243,10 @@ class FirestoreService {
         .get();
 
     final bool isFirstAccount = snapshot.docs.isEmpty;
-    final accountToSave = isFirstAccount
-        ? bank.copyWith(isPrimary: true)
-        : bank;
+    final accountToSave = bank.copyWith(
+      isPrimary: isFirstAccount ? true : bank.isPrimary,
+      balance: 100000.0, // default starter balance for every new account
+    );
 
     await _db
         .collection('users')
@@ -433,5 +434,20 @@ class FirestoreService {
     await _db.collection('users').doc(uid).update({
       'cashbackBalance': FieldValue.increment(-deduct),
     });
+  }
+
+  // ─── Expensya Wallet Activation ──────────────────────────────────
+
+  /// Set Expensya Wallet activation status
+  Future<void> setExpensyaActivated(String uid, bool activated) async {
+    await _db.collection('users').doc(uid).set({
+      'expensyaActivated': activated,
+    }, SetOptions(merge: true));
+  }
+
+  /// Check if Expensya Wallet is activated
+  Future<bool> isExpensyaActivated(String uid) async {
+    final doc = await _db.collection('users').doc(uid).get();
+    return (doc.data()?['expensyaActivated'] as bool?) ?? false;
   }
 }

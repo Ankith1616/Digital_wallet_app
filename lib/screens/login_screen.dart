@@ -4,7 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/theme_manager.dart';
 import '../utils/auth_manager.dart';
 import '../utils/firebase_auth_service.dart';
+import '../utils/email_otp_service.dart';
 import '../utils/fcm_service.dart';
+import 'email_otp_screen.dart';
 import 'otp_verification_screen.dart';
 import 'pin_screen.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
@@ -103,17 +105,40 @@ class _LoginScreenState extends State<LoginScreen>
 
     setState(() => _loading = true);
     try {
-      final credential = await FirebaseAuthService().signInWithEmail(
+      // Phase 1: validate credentials (sign in + immediately sign out)
+      final error = await FirebaseAuthService().prepareLogin(
         email: email,
         password: password,
       );
-      // Init FCM for this user
-      if (credential.user != null) {
-        await FcmService().init(uid: credential.user!.uid);
+      if (error != null) {
+        _showError(error);
+        return;
       }
-      // StreamBuilder in main.dart will auto-navigate to MainLayout
-    } on FirebaseAuthException catch (e) {
-      _showError(FirebaseAuthService.friendlyError(e));
+
+      // Generate & send OTP
+      final otp = EmailOtpService().generateOtp();
+      await EmailOtpService().saveOtp(email, otp);
+      final sendError = await EmailOtpService().sendOtpEmail(email, otp);
+      if (sendError != null) {
+        _showError('Could not send OTP: $sendError');
+        return;
+      }
+
+      if (!mounted) return;
+      _showSuccess('OTP sent to $email');
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              EmailOtpScreen(email: email, password: password, isSignUp: false),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        _showError(
+          'Something went wrong: ${e.toString().split(']').last.trim()}',
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -135,19 +160,45 @@ class _LoginScreenState extends State<LoginScreen>
 
     setState(() => _loading = true);
     try {
-      final credential = await FirebaseAuthService().signUpWithEmail(
+      // Phase 1: create account + immediately sign out
+      final error = await FirebaseAuthService().prepareSignUp(
         email: email,
         password: password,
         name: name,
       );
-      // Init FCM for this user
-      if (credential.user != null) {
-        await FcmService().init(uid: credential.user!.uid);
+      if (error != null) {
+        _showError(error);
+        return;
       }
-      _showSuccess('Account created! Welcome, $name 🎉');
-      // StreamBuilder in main.dart will auto-navigate to MainLayout
-    } on FirebaseAuthException catch (e) {
-      _showError(FirebaseAuthService.friendlyError(e));
+
+      // Generate & send OTP
+      final otp = EmailOtpService().generateOtp();
+      await EmailOtpService().saveOtp(email, otp);
+      final sendError = await EmailOtpService().sendOtpEmail(email, otp);
+      if (sendError != null) {
+        _showError('Could not send OTP: $sendError');
+        return;
+      }
+
+      if (!mounted) return;
+      _showSuccess('Account created! Verify your email to continue.');
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EmailOtpScreen(
+            email: email,
+            password: password,
+            name: name,
+            isSignUp: true,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        _showError(
+          'Something went wrong: ${e.toString().split(']').last.trim()}',
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

@@ -74,7 +74,7 @@ class _PinGateScreenState extends State<PinGateScreen> {
   }
 
   Future<bool> _handlePin(String pin) async {
-    final valid = await _auth.verifyPin(pin);
+    final valid = await _auth.verifyDigiPin(pin);
     if (valid) {
       if (mounted) _navigateToChild();
       return false; // false = don't shake (success)

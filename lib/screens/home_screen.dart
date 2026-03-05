@@ -39,6 +39,8 @@ import 'help_support_screen.dart';
 import 'budget_bot_screen.dart';
 import 'offers_rewards_screen.dart';
 import '../utils/localization_helper.dart';
+import '../utils/auth_manager.dart';
+import 'pin_gate_screen.dart';
 
 // ============================================
 // 1. DASHBOARD / HOME SCREEN (PhonePe style)
@@ -469,13 +471,24 @@ class _DashboardTabState extends State<DashboardTab> {
                         Icons.settings_suggest_outlined,
                         L10n.s("setup"),
                         const Color(0xFF6C63FF), // purple
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const SetupScreen(),
-                            ),
-                          );
+                        () async {
+                          final hasPin = await AuthService().hasDigiPin();
+                          if (!context.mounted) return;
+                          if (hasPin) {
+                            PinGateScreen.push(
+                              context,
+                              destination: const SetupScreen(),
+                              title: 'Verify Digi PIN',
+                              subtitle: 'Enter your PIN to access Setup',
+                            );
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const SetupScreen(),
+                              ),
+                            );
+                          }
                         },
                       ),
                       _circleAction(
@@ -1893,7 +1906,7 @@ class _StatsTabState extends State<StatsTab> {
         // but here we just use the raw amount or scale it if necessary.
         // The original dummy data used values around 5-22.
         // Let's use amount / 1000 to fit that scale, or just raw amount if it's small.
-        values[index] += tx.amount / 1000;
+        values[index] += tx.amount.abs() / 1000;
       }
     }
 
@@ -2292,7 +2305,8 @@ class _StatsTabState extends State<StatsTab> {
   }
 
   Widget _buildSavingsGoalCard(double goal, double savedSoFar, bool isDark) {
-    final progress = (savedSoFar / goal).clamp(0.0, 1.0);
+    final clampedSaved = savedSoFar.clamp(0.0, goal);
+    final progress = goal > 0 ? (clampedSaved / goal).clamp(0.0, 1.0) : 0.0;
     final pctText = '${(progress * 100).toStringAsFixed(0)}%';
     final isOnTrack = savedSoFar >= 0;
     return Container(
@@ -2360,8 +2374,13 @@ class _StatsTabState extends State<StatsTab> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "₹${savedSoFar.toInt()} saved",
-                style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey),
+                savedSoFar >= 0
+                    ? "₹${savedSoFar.toInt()} saved"
+                    : "₹${savedSoFar.abs().toInt()} overspent",
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: savedSoFar >= 0 ? Colors.grey : Colors.red,
+                ),
               ),
               Text(
                 "Goal: ₹${goal.toInt()}",

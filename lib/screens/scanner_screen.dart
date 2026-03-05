@@ -12,6 +12,7 @@ import '../widgets/payment_result_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/localization_helper.dart';
 import '../utils/rewards_service.dart';
+import 'package:image_picker/image_picker.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ScannerTab — QR scanner with torch only (no gallery, no quick-action buttons)
@@ -31,6 +32,39 @@ class _ScannerTabState extends State<ScannerTab> {
   );
 
   bool _hasScanned = false;
+  bool _processingGallery = false;
+
+  Future<void> _pickFromGallery() async {
+    if (_processingGallery || _hasScanned) return;
+    try {
+      setState(() => _processingGallery = true);
+      final picker = ImagePicker();
+      final image = await picker.pickImage(source: ImageSource.gallery);
+      if (image == null) return;
+
+      // analyzeImage returns bool in newer mobile_scanner versions:
+      // true = barcode detected (triggers _onDetect callback automatically)
+      // false = no barcode found in image
+      final result = await _controller.analyzeImage(image.path);
+      if (result != true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'No QR code found in the selected image.',
+              style: GoogleFonts.spaceGrotesk(),
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red.shade700,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _processingGallery = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -452,7 +486,7 @@ class _ScannerTabState extends State<ScannerTab> {
               ),
             ),
 
-          // Bottom — torch toggle only
+          // Bottom bar — torch & gallery
           Positioned(
             bottom: 0,
             left: 0,
@@ -466,42 +500,86 @@ class _ScannerTabState extends State<ScannerTab> {
                   end: Alignment.bottomCenter,
                 ),
               ),
-              child: Column(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
+                  // Torch toggle
                   ValueListenableBuilder<MobileScannerState>(
                     valueListenable: _controller,
                     builder: (context, state, child) {
                       final torchOn = state.torchState == TorchState.on;
-                      return GestureDetector(
-                        onTap: () => _controller.toggleTorch(),
+                      return Column(
+                        children: [
+                          GestureDetector(
+                            onTap: () => _controller.toggleTorch(),
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: torchOn
+                                    ? AppColors.primary.withOpacity(0.35)
+                                    : Colors.white.withOpacity(0.15),
+                              ),
+                              child: Icon(
+                                torchOn
+                                    ? Icons.flashlight_on
+                                    : Icons.flashlight_off,
+                                color: torchOn
+                                    ? AppColors.primaryLight
+                                    : Colors.white,
+                                size: 26,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Torch',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white60,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+
+                  // Gallery QR picker
+                  Column(
+                    children: [
+                      GestureDetector(
+                        onTap: _processingGallery ? null : _pickFromGallery,
                         child: Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: torchOn
-                                ? AppColors.primary.withOpacity(0.35)
-                                : Colors.white.withOpacity(0.15),
+                            color: Colors.white.withOpacity(0.15),
                           ),
-                          child: Icon(
-                            torchOn
-                                ? Icons.flashlight_on
-                                : Icons.flashlight_off,
-                            color: torchOn
-                                ? AppColors.primaryLight
-                                : Colors.white,
-                            size: 26,
-                          ),
+                          child: _processingGallery
+                              ? const SizedBox(
+                                  width: 26,
+                                  height: 26,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.photo_library_outlined,
+                                  color: Colors.white,
+                                  size: 26,
+                                ),
                         ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Torch',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white60,
-                      fontSize: 11,
-                    ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Gallery',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white60,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "129528742325",
-    "project_id": "digital-wallet-and-tracker",
-    "storage_bucket": "digital-wallet-and-tracker.firebasestorage.app"
+    "project_number": "947462306422",
+    "project_id": "digital-wallet-new",
+    "storage_bucket": "digital-wallet-new.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:129528742325:android:f8ec052d75717ecd71d9fc",
+        "mobilesdk_app_id": "1:947462306422:android:c65fff8aaeb1bfad183d57",
         "android_client_info": {
           "package_name": "com.example.wallet_g"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCSpz8eS_EPrgnXcftwkNYjfLShBqj-N7M"
+          "current_key": "AIzaSyAa-BOnhLrllg3-OdMHagDFmD956pvZ8_g"
         }
       ],
       "services": {

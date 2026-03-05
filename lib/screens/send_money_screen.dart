@@ -103,7 +103,8 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
         _filtered = valid;
         _state = _ContactsState.loaded;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('❌ Failed to load contacts: $e');
       setState(() => _state = _ContactsState.error);
     }
   }
@@ -525,7 +526,23 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                             if (!verified) return;
                             if (!context.mounted) return;
 
-                            // 3. Deduct balance from the specific bank account
+                            // 3. Check sufficient balance
+                            if (selectedBank.balance < amountDouble) {
+                              await PaymentResultDialog.show(
+                                context,
+                                success: false,
+                                title: 'Insufficient Balance',
+                                subtitle:
+                                    'Your ${selectedBank.bankName} account does not have enough balance for this transfer.',
+                                amount: amount,
+                                recipient: name,
+                              );
+                              return;
+                            }
+
+                            if (!context.mounted) return;
+
+                            // 4. Deduct balance from the specific bank account
                             await FirestoreService().updateBankAccountBalance(
                               user.uid,
                               selectedBank.id,

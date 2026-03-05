@@ -528,7 +528,23 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
     if (!verified) return;
     if (!mounted) return;
 
-    // ── Step 6: Deduct bank balance ───────────────────────────────
+    // ── Step 6: Check sufficient balance ──────────────────────────
+    if (selectedBank.balance < amountDouble) {
+      await PaymentResultDialog.show(
+        context,
+        success: false,
+        title: 'Insufficient Balance',
+        subtitle:
+            'Your ${selectedBank.bankName} account does not have enough balance for this payment.',
+        amount: amount,
+        recipient: widget.title,
+      );
+      return;
+    }
+
+    if (!mounted) return;
+
+    // ── Step 7: Deduct bank balance ───────────────────────────────
     await FirestoreService().updateBankAccountBalance(
       user.uid,
       selectedBank.id,
@@ -557,13 +573,24 @@ class _ServicePageTemplateState extends State<ServicePageTemplate> {
     // ── Step 8: Award cashback ────────────────────────────────────
     await RewardsService().awardCashback(amountDouble);
 
+    // ── Step 8b: Auto-apply Expensya cashback if eligible ──────────
+    final autoApplied = await RewardsService().autoApplyCashback();
+
     if (!mounted) return;
 
     // ── Step 9: Show result ───────────────────────────────────────
     final cashback = RewardsService().calculateCashback(amountDouble);
-    final subtitle = cashback > 0
-        ? 'Your ${widget.title.toLowerCase()} has been processed. +₹${cashback.toStringAsFixed(2)} cashback earned!'
-        : 'Your ${widget.title.toLowerCase()} request has been processed successfully.';
+    String subtitle;
+    if (autoApplied > 0) {
+      subtitle =
+          'Payment processed. +₹${cashback.toStringAsFixed(2)} cashback earned! ₹${autoApplied.toStringAsFixed(0)} auto-applied from Expensya Wallet.';
+    } else if (cashback > 0) {
+      subtitle =
+          'Your ${widget.title.toLowerCase()} has been processed. +₹${cashback.toStringAsFixed(2)} cashback earned!';
+    } else {
+      subtitle =
+          'Your ${widget.title.toLowerCase()} request has been processed successfully.';
+    }
 
     await PaymentResultDialog.show(
       context,

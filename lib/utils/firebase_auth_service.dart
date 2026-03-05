@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'firestore_service.dart';
+import '../firebase_options.dart';
 
 class FirebaseAuthService {
   static final FirebaseAuthService _instance = FirebaseAuthService._internal();
@@ -63,6 +66,135 @@ class FirebaseAuthService {
       }
     }
     return credential;
+  }
+
+  // ─── Email OTP Two-Phase Auth ───────────────────────────────────────────────
+
+  /// Phase 1 (Login): Validate credentials via REST API to avoid triggering
+  /// local authStateChanges prematurely. Returns `null` on success.
+  Future<String?> prepareLogin({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final apiKey = DefaultFirebaseOptions.currentPlatform.apiKey;
+      final url = Uri.parse(
+        'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$apiKey',
+      );
+
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+          'returnSecureToken': true,
+        }),
+      );
+
+      final data = jsonDecode(res.body);
+      if (data['error'] != null) {
+        final msg = data['error']['message'] as String;
+        if (msg.contains('INVALID_LOGIN_CREDENTIALS') ||
+            msg.contains('INVALID_PASSWORD') ||
+            msg.contains('EMAIL_NOT_FOUND')) {
+          return 'Invalid email or password.';
+        } else if (msg.contains('USER_DISABLED')) {
+          return 'This account has been disabled.';
+        }
+        return 'Login failed: $msg';
+      }
+      return null;
+    } catch (e) {
+      return 'Network error. Please try again.';
+    }
+  }
+
+  /// Phase 1 (Sign Up): Create account via REST API to avoid triggering
+  /// local authStateChanges prematurely. Returns `null` on success.
+  ///
+  /// Edge-case handled: if the email was already registered in a PREVIOUS
+  /// abandoned OTP flow, we check password. If it matches, we allow standard OTP verify.
+  Future<String?> prepareSignUp({
+    required String email,
+    required String password,
+    required String name,
+  }) async {
+    try {
+      final apiKey = DefaultFirebaseOptions.currentPlatform.apiKey;
+      final url = Uri.parse(
+        'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$apiKey',
+      );
+
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+          'returnSecureToken': true,
+        }),
+      );
+
+      final data = jsonDecode(res.body);
+      if (data['error'] != null) {
+        final msg = data['error']['message'] as String;
+        if (msg.contains('EMAIL_EXISTS')) {
+          // Check if password matches to handle abandoned OTP flow
+          final loginCheck = await prepareLogin(
+            email: email,
+            password: password,
+          );
+          if (loginCheck == null) {
+            // Password matches, allow them to verify OTP again
+            return null;
+          }
+          return 'This email is already registered. Please go to Login instead.';
+        } else if (msg.contains('WEAK_PASSWORD')) {
+          return 'Password must be at least 6 characters.';
+        } else if (msg.contains('INVALID_EMAIL')) {
+          return 'Please enter a valid email address.';
+        }
+        return 'Sign-up failed: $msg';
+      }
+      return null;
+    } catch (e) {
+      return 'Network error. Please try again.';
+    }
+  }
+
+  /// Phase 2: Final sign-in after OTP is verified. This triggers the
+  /// `authStateChanges` stream which auto-navigates to MainLayout.
+  Future<String?> completeSignIn({
+    required String email,
+    required String password,
+    String? name, // Passed during sign up to set display name
+  }) async {
+    try {
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final user = credential.user;
+      if (user != null) {
+        if (name != null && name.isNotEmpty) {
+          await user.updateDisplayName(name);
+        }
+        final existing = await FirestoreService().getUserProfile(user.uid);
+        if (existing == null) {
+          await FirestoreService().createUserProfile(
+            uid: user.uid,
+            name: name ?? user.displayName ?? email.split('@').first,
+            email: email,
+          );
+        }
+      }
+      return null;
+    } on FirebaseAuthException catch (e) {
+      return friendlyError(e);
+    } catch (e) {
+      return 'Sign-in failed. Please try again.';
+    }
   }
 
   /// Sign out
@@ -220,4 +352,3 @@ class FirebaseAuthService {
     }
   }
 }
-

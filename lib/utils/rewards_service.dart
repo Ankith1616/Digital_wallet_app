@@ -1,5 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'firestore_service.dart';
+import '../models/transaction.dart';
+import 'transaction_manager.dart';
 
 /// Central service for calculating and managing cashback / rewards.
 class RewardsService {
@@ -15,6 +18,9 @@ class RewardsService {
 
   /// Minimum transaction amount to earn cashback (₹10)
   static const double _minTxAmount = 10.0;
+
+  /// Auto-apply threshold for Expensya Wallet
+  static const double autoApplyThreshold = 20.0;
 
   // ─── Calculation ──────────────────────────────────────────────────
 
@@ -43,7 +49,6 @@ class RewardsService {
   Future<double> redeemCashback(double amount) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return 0.0;
-    // Fetch current balance first
     final profile = await FirestoreService().getUserProfile(uid);
     final balance = (profile?['cashbackBalance'] as num?)?.toDouble() ?? 0.0;
     final deduct = amount > balance ? balance : amount;
@@ -58,5 +63,44 @@ class RewardsService {
     if (uid == null) return 0.0;
     final profile = await FirestoreService().getUserProfile(uid);
     return (profile?['cashbackBalance'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  // ─── Expensya Auto-Apply ──────────────────────────────────────────
+
+  /// Auto-apply cashback discount if Expensya Wallet is activated and
+  /// balance ≥ ₹20. Returns the discount amount applied (0 if none).
+  /// Call this after every successful payment.
+  Future<double> autoApplyCashback() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return 0.0;
+
+    // Check if wallet is activated
+    final activated = await FirestoreService().isExpensyaActivated(uid);
+    if (!activated) return 0.0;
+
+    // Check balance
+    final balance = await getCashbackBalance();
+    if (balance < autoApplyThreshold) return 0.0;
+
+    // Redeem ₹20
+    final redeemed = await redeemCashback(autoApplyThreshold);
+    if (redeemed <= 0) return 0.0;
+
+    // Record as a transaction
+    TransactionManager().addTransaction(
+      Transaction(
+        id: 'cashback_${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Expensya Cashback Applied',
+        date: DateTime.now(),
+        amount: redeemed,
+        isPositive: true,
+        icon: Icons.redeem,
+        color: const Color(0xFF00E5A0),
+        details: 'Auto-applied from Expensya Wallet',
+        category: TransactionCategory.other,
+      ),
+    );
+
+    return redeemed;
   }
 }

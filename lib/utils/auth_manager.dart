@@ -14,8 +14,10 @@ class AuthService {
   final LocalAuthentication _localAuth = LocalAuthentication();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  // Storage key for PIN
+  // Storage key for Transaction PIN
   static const String _pinKey = 'user_pin';
+  // Storage key for Digi PIN (App Lock — separate from Transaction PIN)
+  static const String _digiPinKey = 'digi_pin';
   static const String _biometricEnabledKey = 'biometric_enabled';
   static const String _instantPayEnabledKey = 'instant_pay_enabled';
   static const String _instantLimitKey = 'instant_limit';
@@ -157,7 +159,7 @@ class AuthService {
         localizedReason: 'Please authenticate to access the app',
         options: const AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: true,
+          biometricOnly: false,
         ),
       );
     } on PlatformException catch (e) {
@@ -166,5 +168,30 @@ class AuthService {
       }
       return false;
     }
+  }
+
+  // ─── Digi PIN (App Lock) ────────────────────────────────────────────
+
+  /// Returns true if a Digi PIN has been set (app lock).
+  Future<bool> hasDigiPin() async {
+    final pin = await _storage.read(key: _digiPinKey);
+    return pin != null && pin.isNotEmpty;
+  }
+
+  /// Set or change the Digi PIN.
+  Future<void> setDigiPin(String pin) async {
+    await _storage.write(key: _digiPinKey, value: pin);
+  }
+
+  /// Verify the entered Digi PIN. Returns true if correct.
+  Future<bool> verifyDigiPin(String enteredPin) async {
+    final stored = await _storage.read(key: _digiPinKey);
+    if (stored == null || stored.isEmpty) return false;
+    return stored == enteredPin;
+  }
+
+  /// Clear the Digi PIN (disables app lock).
+  Future<void> clearDigiPin() async {
+    await _storage.delete(key: _digiPinKey);
   }
 }

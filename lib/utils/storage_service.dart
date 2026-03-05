@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 
 class StorageService {
   static final StorageService _instance = StorageService._internal();
@@ -29,9 +29,8 @@ class StorageService {
 
       return await ref.getDownloadURL();
     } catch (e) {
-      print("Error uploading image: $e");
-      return null;
+      debugPrint("❌ Error uploading image: $e");
+      rethrow;
     }
   }
 }
-

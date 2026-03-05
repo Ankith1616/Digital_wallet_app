@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import '../utils/theme_manager.dart';
 import '../utils/firebase_auth_service.dart';
 import 'personal_info_screen.dart';
@@ -13,6 +16,7 @@ import 'about_screen.dart';
 import 'autopay_management_screen.dart';
 import 'biometric_settings_screen.dart';
 import 'pin_gate_screen.dart';
+import 'digi_premium_screen.dart';
 import '../widgets/interactive_scale.dart';
 import '../utils/locale_manager.dart';
 import '../utils/localization_helper.dart';
@@ -39,9 +43,65 @@ class ProfileScreen extends StatelessWidget {
 }
 
 // Used in Bottom Navigation Tab
-class ProfileTab extends StatelessWidget {
+class ProfileTab extends StatefulWidget {
   final bool isNested;
   const ProfileTab({super.key, this.isNested = true});
+
+  @override
+  State<ProfileTab> createState() => _ProfileTabState();
+}
+
+class _ProfileTabState extends State<ProfileTab> {
+  bool _isUploadingProfilePic = false;
+
+  Future<void> _pickAndUploadImage() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 75,
+      );
+
+      if (pickedFile == null) return; // User cancelled
+
+      if (mounted) setState(() => _isUploadingProfilePic = true);
+
+      final file = File(pickedFile.path);
+
+      // Upload to Firebase Storage
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('avatars')
+          .child('${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+
+      await storageRef.putFile(file);
+      final downloadUrl = await storageRef.getDownloadURL();
+
+      // Update Firebase Auth profile
+      await user.updatePhotoURL(downloadUrl);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile picture updated safely!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to upload image. Try again later.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingProfilePic = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +113,7 @@ class ProfileTab extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (isNested) ...[
+            if (widget.isNested) ...[
               Text(
                 L10n.s('my_profile'),
                 style: GoogleFonts.spaceGrotesk(
@@ -89,40 +149,54 @@ class ProfileTab extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.4),
-                              blurRadius: 12,
-                            ),
-                          ],
-                        ),
-                        child: photoUrl != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(28),
-                                child: Image.network(
-                                  photoUrl,
-                                  fit: BoxFit.cover,
-                                  width: 56,
-                                  height: 56,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(
-                                        Icons.person_rounded,
+                      GestureDetector(
+                        onTap: _isUploadingProfilePic
+                            ? null
+                            : _pickAndUploadImage,
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            gradient: AppColors.primaryGradient,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withOpacity(0.4),
+                                blurRadius: 12,
+                              ),
+                            ],
+                          ),
+                          child: _isUploadingProfilePic
+                              ? const Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : (photoUrl != null
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(28),
+                                        child: Image.network(
+                                          photoUrl,
+                                          fit: BoxFit.cover,
+                                          width: 56,
+                                          height: 56,
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  const Icon(
+                                                    Icons.person_rounded,
+                                                    color: Colors.white,
+                                                    size: 28,
+                                                  ),
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.add_a_photo_rounded,
                                         color: Colors.white,
                                         size: 28,
-                                      ),
-                                ),
-                              )
-                            : const Icon(
-                                Icons.person_rounded,
-                                color: Colors.white,
-                                size: 28,
-                              ),
+                                      )),
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -172,6 +246,18 @@ class ProfileTab extends StatelessWidget {
             ),
 
             const SizedBox(height: 24),
+
+            // == Digi Premium ==
+            _settingsTile(
+              context,
+              Icons.workspace_premium_rounded,
+              'Digi Premium',
+              const Color(0xFFFFD700), // gold
+              const DigiPremiumScreen(),
+              isDark,
+            ),
+
+            const SizedBox(height: 20),
 
             // == Payment Settings ==
             _sectionHeader(L10n.s("payment_settings")),
@@ -233,6 +319,17 @@ class ProfileTab extends StatelessWidget {
               isDark,
               title: 'Security Settings',
               subtitle: 'Enter PIN to access privacy & security settings.',
+            ),
+            // Change Digi PIN
+            _pinProtectedTile(
+              context,
+              Icons.password_rounded,
+              'Change Digi PIN',
+              AppColors.primary,
+              const PrivacySecurityScreen(), // Maps to Privacy screen for now where PIN change will live
+              isDark,
+              title: 'Verify Current PIN',
+              subtitle: 'Enter your current PIN to change it.',
             ),
             _settingsTile(
               context,
@@ -315,7 +412,7 @@ class ProfileTab extends StatelessWidget {
               ),
             ),
 
-            SizedBox(height: isNested ? 80 : 20),
+            SizedBox(height: widget.isNested ? 80 : 20),
           ],
         ),
       ),

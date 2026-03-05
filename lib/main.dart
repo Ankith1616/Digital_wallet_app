@@ -7,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
+import 'screens/digi_pin_lock_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/scanner_screen.dart';
 import 'screens/transaction_history_screen.dart';
@@ -52,7 +53,25 @@ class DigitalWalletApp extends StatelessWidget {
                       body: Center(child: CircularProgressIndicator()),
                     );
                   }
-                  if (snapshot.hasData) return MainLayout();
+                  if (snapshot.hasData) {
+                    // Check if Digi PIN is set — gate MainLayout if so
+                    return FutureBuilder<bool>(
+                      future: AuthService().hasDigiPin(),
+                      builder: (ctx, pinSnap) {
+                        if (pinSnap.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Scaffold(
+                            body: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+                        final hasPinSet = pinSnap.data ?? false;
+                        if (hasPinSet) {
+                          return _DigiPinGate();
+                        }
+                        return MainLayout();
+                      },
+                    );
+                  }
                   return const LoginScreen();
                 },
               ),
@@ -60,6 +79,26 @@ class DigitalWalletApp extends StatelessWidget {
           },
         );
       },
+    );
+  }
+}
+
+/// Stateful gate: shows DigiPinLockScreen. On successful unlock, replaces
+/// itself with MainLayout using a state flag (avoids pushing a new route).
+class _DigiPinGate extends StatefulWidget {
+  const _DigiPinGate();
+  @override
+  State<_DigiPinGate> createState() => _DigiPinGateState();
+}
+
+class _DigiPinGateState extends State<_DigiPinGate> {
+  bool _unlocked = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_unlocked) return MainLayout();
+    return DigiPinLockScreen(
+      onUnlocked: () => setState(() => _unlocked = true),
     );
   }
 }

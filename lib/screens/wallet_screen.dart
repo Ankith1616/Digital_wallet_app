@@ -6,6 +6,7 @@ import '../utils/firestore_service.dart';
 import '../models/bank_account.dart';
 import 'setup_screen.dart';
 import '../utils/auth_manager.dart';
+import 'pin_gate_screen.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -117,10 +118,21 @@ class _WalletScreenState extends State<WalletScreen> {
               leading: const Icon(Icons.bolt, color: Colors.white, size: 32),
               trailing: TextButton(
                 onPressed: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SetupScreen()),
-                  );
+                  final hasPin = await AuthService().hasDigiPin();
+                  if (!mounted) return;
+                  if (hasPin) {
+                    await PinGateScreen.push(
+                      context,
+                      destination: const SetupScreen(),
+                      title: 'Verify Digi PIN',
+                      subtitle: 'Enter your PIN to access Setup',
+                    );
+                  } else {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SetupScreen()),
+                    );
+                  }
                   if (mounted) setState(() {});
                 },
                 child: Text(
@@ -134,26 +146,56 @@ class _WalletScreenState extends State<WalletScreen> {
                 ),
               ),
             ),
-            _listTile(
-              context,
-              title: "Expensya Wallet",
-              subtitle: "Balance: ₹0",
-              leading: const Icon(
-                Icons.account_balance_wallet_outlined,
-                color: Colors.white,
-                size: 32,
+            if (user != null)
+              StreamBuilder<Map<String, double>>(
+                stream: FirestoreService().rewardsStream(user.uid),
+                builder: (context, snapshot) {
+                  final balance = snapshot.data?['cashbackBalance'] ?? 0.0;
+                  return FutureBuilder<bool>(
+                    future: FirestoreService().isExpensyaActivated(user.uid),
+                    builder: (context, activatedSnap) {
+                      final isActivated = activatedSnap.data ?? false;
+                      return _listTile(
+                        context,
+                        title: "Expensya Wallet",
+                        subtitle: isActivated
+                            ? "Balance: ₹${balance.toStringAsFixed(2)}"
+                            : "Activate to earn cashback rewards",
+                        leading: const Icon(
+                          Icons.account_balance_wallet_outlined,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                        trailing: TextButton(
+                          onPressed: () async {
+                            if (isActivated) return;
+                            await FirestoreService().setExpensyaActivated(
+                              user.uid,
+                              true,
+                            );
+                            if (mounted) setState(() {});
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Expensya Wallet Activated! 🎉'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          },
+                          child: Text(
+                            isActivated ? "Active ✓" : "Activate",
+                            style: GoogleFonts.spaceGrotesk(
+                              color: isActivated
+                                  ? AppColors.primary
+                                  : Colors.deepPurpleAccent,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
-              trailing: TextButton(
-                onPressed: () {},
-                child: Text(
-                  "Activate",
-                  style: GoogleFonts.spaceGrotesk(
-                    color: Colors.deepPurpleAccent,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -234,10 +276,11 @@ class _WalletScreenState extends State<WalletScreen> {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final pin = pinController.text;
               Navigator.pop(context);
-              onComplete(pin == "1234"); // Dummy PIN verification
+              final isCorrect = await AuthService().verifyPin(pin);
+              onComplete(isCorrect);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.deepPurpleAccent,
